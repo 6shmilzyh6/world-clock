@@ -1,0 +1,3 @@
+5ffaf6b8842b689ee61106c78af16d69e566613527c1cb889181ae927541be96  WorldClock-zh-v1.0.0.apk
+7c1b80f85a05e02a1aeea4e8c58eeebc9a15b8892ff29bef8f6d588172dbb6cb  WorldClock-Intl-v1.0.0.apk
+8cf0a216e1193da86fdaf5b57f61448d8a1dfd8d8b165b71c844188a8a641dad  WorldClock-single.html

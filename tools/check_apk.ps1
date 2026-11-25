@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Continue'
+﻿$ErrorActionPreference = 'Continue'
 $BT = 'D:\Documents\world-clock\tools\sdk\build-tools\34.0.0'
 $env:JAVA_HOME = 'D:\Documents\world-clock\tools\jdk\jdk-17.0.21.1+2'
 $env:PATH = "$env:JAVA_HOME\bin;$BT;$env:PATH"

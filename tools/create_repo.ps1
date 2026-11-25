@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $env:PATH = "D:\新建文件夹\Git\cmd;D:\新建文件夹\Git\mingw64\bin;" + $env:PATH
 $env:GIT_TERMINAL_PROMPT = '0'
 

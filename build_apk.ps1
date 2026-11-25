@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # 世界时钟 · Android 构建（aapt2 + javac + d8 + apksigner，无 Gradle）
 #   -Variant cn   → 中文版 com.yg.worldclock     「世界时钟」
 #   -Variant intl → 国际版 com.yg.worldclock.intl "World Clock"（默认英文）
