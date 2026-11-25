@@ -1,0 +1,8 @@
+{
+  "name": "wc-e2e",
+  "version": "1.0.0",
+  "main": "main.js",
+  "dependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

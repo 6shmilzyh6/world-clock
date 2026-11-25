@@ -1,0 +1,27 @@
+# ---- 构建中间产物 ----
+build/
+*.zip
+*.idsig
+
+# ---- 便携工具链（体积巨大，不入库；见 README 重建说明）----
+tools/jdk/
+tools/sdk/
+tools/sdk-tmp/
+tools/*.zip
+
+# ---- 签名密钥：绝不入库 ----
+keystore/
+*.keystore
+*.jks
+
+# ---- 测试依赖 ----
+test/e2e/node_modules/
+test/e2e/package-lock.json
+test/e2e/shots*/
+test/e2e/*.args
+
+# ---- 系统垃圾 ----
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log

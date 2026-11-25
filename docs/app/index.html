@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="世界时钟">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b2029'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%23e2ecff' stroke-width='2.6'/%3E%3Cellipse cx='32' cy='32' rx='6' ry='17' fill='none' stroke='%238cb4ff' stroke-width='1.8'/%3E%3Cline x1='32' y1='32' x2='32' y2='19' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='32' y1='32' x2='43' y2='38' stroke='%234fc8ff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="description" content="按你设定的位置换算世界各地时间，自动处理夏令时，纯离线运行。">
+<title>世界时钟 · World Clock</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🌐</span>
+      <span id="appTitle">世界时钟</span>
+    </div>
+    <div class="topactions">
+      <button class="iconbtn" id="btnLang" title="语言 / Language">中/EN</button>
+      <button class="iconbtn" id="btnSettings" title="设置">⚙️</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 我的位置 -->
+    <section class="basecard" id="baseCard">
+      <div class="basecard-head">
+        <span class="dot"></span>
+        <span id="baseLabel">我的位置</span>
+        <span class="spacer"></span>
+        <button class="linkbtn" id="btnPickBase">切换</button>
+      </div>
+      <div class="basecard-body">
+        <div class="bigtime" id="baseTime">--:--</div>
+        <div class="basemeta">
+          <div id="baseCity">—</div>
+          <div class="muted" id="baseSub">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 模式 -->
+    <div class="modeswitch" role="tablist">
+      <button class="modebtn active" data-mode="now" id="modeNow">实时</button>
+      <button class="modebtn" data-mode="wall" id="modeWall">指定时间</button>
+    </div>
+
+    <!-- 指定时间面板 -->
+    <section class="panel hidden" id="wallPanel">
+      <div class="panelrow">
+        <label class="chip" id="refChip">基准：我的位置</label>
+        <span class="spacer"></span>
+        <button class="linkbtn" id="btnPickRef">换基准城市</button>
+      </div>
+      <div class="panelrow">
+        <input type="date" id="inDate" class="field">
+        <input type="time" id="inTime" class="field">
+        <button class="linkbtn" id="btnResetNow">现在</button>
+      </div>
+      <div class="panelrow">
+        <span class="tiny muted" id="sliderVal">—</span>
+        <input type="range" id="timeSlider" min="0" max="1439" step="5" class="slider">
+      </div>
+      <div class="quickrow" id="quickRow"></div>
+    </section>
+
+    <!-- 目标列表 -->
+    <div class="listhead">
+      <span id="targetsTitle">对照城市</span>
+      <span class="spacer"></span>
+      <span class="tiny muted" id="targetCount"></span>
+    </div>
+    <section id="targetList" class="targets"></section>
+
+    <button class="addbtn" id="btnAdd">＋ <span id="addLabel">添加城市</span></button>
+    <div class="foot" id="foot"></div>
+  </main>
+</div>
+
+<!-- 城市选择器 -->
+<div class="sheet hidden" id="pickerSheet">
+  <div class="sheet-mask" data-close="picker"></div>
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <input class="search" id="pickerSearch" placeholder="搜索城市 / 时区">
+      <button class="linkbtn" data-close="picker">关闭</button>
+    </div>
+    <div class="picker-hint" id="pickerHint"></div>
+    <div class="picker-list" id="pickerList"></div>
+  </div>
+</div>
+
+<!-- 城市详情 -->
+<div class="sheet hidden" id="detailSheet">
+  <div class="sheet-mask" data-close="detail"></div>
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <strong id="detailTitle">—</strong>
+      <span class="spacer"></span>
+      <button class="linkbtn" data-close="detail">关闭</button>
+    </div>
+    <div class="detail-list" id="detailList"></div>
+  </div>
+</div>
+
+<!-- 设置 -->
+<div class="sheet hidden" id="setSheet">
+  <div class="sheet-mask" data-close="set"></div>
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <strong id="setTitle">设置</strong>
+      <span class="spacer"></span>
+      <button class="linkbtn" data-close="set">关闭</button>
+    </div>
+    <div class="set-list">
+      <div class="setrow">
+        <span id="setAuto">自动识别我的位置</span>
+        <button class="linkbtn" id="btnAutoLoc">识别</button>
+      </div>
+      <div class="setrow">
+        <span id="setFmt">24 小时制</span>
+        <button class="switchbtn" id="btnFmt">24h</button>
+      </div>
+      <div class="setrow">
+        <span id="setSec">显示秒</span>
+        <button class="switchbtn" id="btnSec">关</button>
+      </div>
+      <div class="setrow">
+        <span id="setTheme">深色主题</span>
+        <button class="switchbtn" id="btnTheme">暗</button>
+      </div>
+      <div class="setrow">
+        <span id="setAdvice">显示联系建议</span>
+        <button class="switchbtn" id="btnAdvice">开</button>
+      </div>
+      <div class="setrow">
+        <span id="setPreset">快速套用</span>
+        <span class="spacer"></span>
+      </div>
+      <div class="quickrow" id="presetRow"></div>
+      <div class="setrow danger">
+        <span id="setClear">清空所有对照城市</span>
+        <button class="linkbtn" id="btnClear">清空</button>
+      </div>
+      <div class="setrow about" id="aboutBox"></div>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
