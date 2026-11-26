@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="世界时钟">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b2029'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%23e2ecff' stroke-width='2.6'/%3E%3Cellipse cx='32' cy='32' rx='6' ry='17' fill='none' stroke='%238cb4ff' stroke-width='1.8'/%3E%3Cline x1='32' y1='32' x2='32' y2='19' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='32' y1='32' x2='43' y2='38' stroke='%234fc8ff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>世界时钟 · World Clock</title>
+<style>
+/* ================= 世界时钟 · 样式 ================= */
+:root {
+  --bg: #0f1115;
+  --bg2: #161a21;
+  --card: #1b2029;
+  --card2: #222834;
+  --line: #2b323f;
+  --txt: #e8edf6;
+  --txt2: #9aa6ba;
+  --txt3: #6d7889;
+  --accent: #4f8cff;
+  --ok: #3ecf8e;
+  --warn: #f5a524;
+  --bad: #f0553d;
+  --radius: 18px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--bg);
+  color: var(--txt);
+  font-family: -apple-system, "HarmonyOS Sans SC", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+body { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+.app { max-width: 560px; margin: 0 auto; padding: 8px 14px 40px; }
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 2px 12px;
+  position: sticky; top: 0; z-index: 20;
+  background: linear-gradient(180deg, var(--bg) 72%, rgba(15,17,21,0));
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; letter-spacing: .3px; }
+.logo { font-size: 18px; }
+.topactions { margin-left: auto; display: flex; gap: 8px; }
+.iconbtn {
+  background: var(--card); border: 1px solid var(--line); color: var(--txt2);
+  border-radius: 12px; padding: 7px 10px; font-size: 13px; cursor: pointer;
+}
+.iconbtn:active { background: var(--card2); }
+
+/* ---------- 我的位置 ---------- */
+.basecard {
+  background: linear-gradient(150deg, #23304a 0%, #1b2029 62%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px 16px;
+  margin-bottom: 12px;
+}
+.basecard-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--txt2); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(62,207,142,.14); }
+.spacer { flex: 1; }
+.basecard-body { display: flex; align-items: flex-end; gap: 14px; margin-top: 6px; }
+.bigtime {
+  font-size: 46px; font-weight: 700; line-height: 1.05; letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.bigtime .sec { font-size: 22px; color: var(--txt2); margin-left: 3px; font-weight: 500; }
+.basemeta { padding-bottom: 8px; min-width: 0; }
+#baseCity { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.muted { color: var(--txt2); }
+.tiny { font-size: 11.5px; }
+
+/* ---------- 模式切换 ---------- */
+.modeswitch {
+  display: flex; gap: 4px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 14px; padding: 3px; margin-bottom: 10px;
+}
+.modebtn {
+  flex: 1; background: transparent; border: 0; color: var(--txt2);
+  padding: 9px 0; font-size: 13.5px; border-radius: 11px; cursor: pointer; font-family: inherit;
+}
+.modebtn.active { background: var(--card2); color: var(--txt); font-weight: 600; box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }
+
+/* ---------- 指定时间面板 ---------- */
+.panel {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 12px; margin-bottom: 12px;
+}
+.panelrow { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; flex-wrap: wrap; }
+.panelrow:last-child { margin-bottom: 0; }
+.chip {
+  font-size: 11.5px; color: var(--accent); background: rgba(79,140,255,.12);
+  border-radius: 999px; padding: 5px 11px;
+}
+.field {
+  flex: 1; min-width: 0; background: var(--bg2); border: 1px solid var(--line);
+  color: var(--txt); border-radius: 10px; padding: 9px 10px; font-size: 14px;
+  font-family: inherit; color-scheme: dark;
+}
+.linkbtn {
+  background: transparent; border: 0; color: var(--accent); font-size: 12.5px;
+  padding: 6px 4px; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.slider { width: 100%; accent-color: var(--accent); }
+.quickrow { display: flex; gap: 6px; flex-wrap: wrap; }
+.quickbtn {
+  background: var(--bg2); border: 1px solid var(--line); color: var(--txt2);
+  border-radius: 9px; padding: 6px 10px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.quickbtn:active { background: var(--card2); color: var(--txt); }
+
+/* ---------- 列表 ---------- */
+.listhead { display: flex; align-items: center; font-size: 12.5px; color: var(--txt2); padding: 4px 4px 8px; }
+.targets { display: flex; flex-direction: column; gap: 9px; }
+.tcard {
+  background: var(--card); border: 1px solid var(--line); border-radius: 15px;
+  padding: 11px 13px; display: flex; align-items: center; gap: 11px;
+  position: relative; overflow: hidden;
+}
+.tcard:active { background: var(--card2); }
+.tcard .flag { font-size: 21px; line-height: 1; }
+.tcard .left { min-width: 0; flex: 1; }
+.tcard .city { font-size: 14.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.tcard .sub { font-size: 11.5px; color: var(--txt3); margin-top: 3px; display: flex; gap: 7px; flex-wrap: wrap; }
+.tcard .right { text-align: right; }
+.tcard .rtime { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+.tcard .rtime .sec { font-size: 13px; color: var(--txt2); }
+.tcard .rdate { font-size: 11.5px; color: var(--txt2); margin-top: 2px; }
+.badge {
+  font-size: 10.5px; padding: 2px 6px; border-radius: 6px; font-weight: 600;
+  background: rgba(79,140,255,.14); color: var(--accent);
+}
+.badge.warn { background: rgba(245,165,36,.14); color: var(--warn); }
+.badge.bad { background: rgba(240,85,61,.14); color: var(--bad); }
+.badge.dst { background: rgba(62,207,142,.14); color: var(--ok); }
+.daytag { font-size: 10.5px; color: var(--txt3); }
+.del {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 0; overflow: hidden;
+  background: rgba(240,85,61,.9); color: #fff; border: 0; font-size: 12px;
+  transition: width .18s ease; cursor: pointer;
+}
+.tcard.swiped .del { width: 62px; }
+.empty {
+  text-align: center; color: var(--txt3); font-size: 13px; padding: 34px 12px;
+  border: 1px dashed var(--line); border-radius: 15px; line-height: 1.9;
+}
+.addbtn {
+  width: 100%; margin-top: 11px; padding: 13px; border-radius: 14px;
+  background: rgba(79,140,255,.1); border: 1px dashed rgba(79,140,255,.45);
+  color: var(--accent); font-size: 14px; cursor: pointer; font-family: inherit;
+}
+.addbtn:active { background: rgba(79,140,255,.18); }
+.foot { text-align: center; color: var(--txt3); font-size: 11px; padding: 20px 0 6px; line-height: 1.8; }
+
+/* ---------- 弹层 ---------- */
+.sheet { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; justify-content: flex-end; }
+.sheet.hidden { display: none; }
+.sheet-mask { position: absolute; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); }
+.sheet-body {
+  position: relative; background: var(--bg2); border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--line);
+  max-height: 86vh; display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: up .22s ease;
+}
+@keyframes up { from { transform: translateY(24px); opacity: .4; } to { transform: none; opacity: 1; } }
+.sheet-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }
+.sheet-head strong { font-size: 15.5px; }
+.search {
+  flex: 1; background: var(--card); border: 1px solid var(--line); color: var(--txt);
+  border-radius: 11px; padding: 10px 12px; font-size: 14px; font-family: inherit;
+}
+.picker-hint { padding: 0 16px 6px; font-size: 11.5px; color: var(--txt3); }
+.picker-list, .detail-list { overflow-y: auto; padding: 0 8px 16px; -webkit-overflow-scrolling: touch; }
+.pitem {
+  display: flex; align-items: center; gap: 10px; padding: 11px 10px;
+  border-radius: 11px; cursor: pointer;
+}
+.pitem:active { background: var(--card); }
+.pitem .pname { font-size: 14px; }
+.pitem .psub { font-size: 11px; color: var(--txt3); margin-top: 2px; }
+.pitem .pright { margin-left: auto; font-size: 12px; color: var(--txt2); font-variant-numeric: tabular-nums; }
+.pitem.on { background: rgba(79,140,255,.1); }
+
+.detail-list { padding: 4px 16px 22px; }
+.detail-row {
+  display: flex; padding: 10px 0; border-bottom: 1px solid var(--line);
+  font-size: 13.5px; align-items: center; gap: 10px;
+}
+.detail-row .k { color: var(--txt2); font-size: 12.5px; min-width: 92px; }
+.detail-row .v { flex: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.year-strip { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0 14px; }
+.ystrip-item {
+  flex: 0 0 auto; text-align: center; padding: 9px 12px; border-radius: 11px;
+  background: var(--card); border: 1px solid var(--line); font-size: 12px; min-width: 74px;
+}
+.ystrip-item b { display: block; font-size: 15px; margin: 4px 0 2px; }
+.ystrip-item.now { border-color: var(--accent); background: rgba(79,140,255,.12); }
+
+.set-list { padding: 4px 16px 24px; }
+.setrow { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.setrow.danger { color: var(--bad); }
+.setrow.about { display: block; color: var(--txt3); font-size: 11.5px; line-height: 1.9; border-bottom: 0; padding-top: 16px; }
+.switchbtn {
+  margin-left: auto; background: var(--card); border: 1px solid var(--line); color: var(--txt2);
+  border-radius: 999px; padding: 5px 14px; font-size: 12px; cursor: pointer; font-family: inherit; min-width: 58px;
+}
+.switchbtn.on { background: rgba(79,140,255,.16); border-color: rgba(79,140,255,.5); color: var(--accent); }
+.hidden { display: none !important; }
+
+/* ---------- 亮色 ---------- */
+body.light {
+  --bg: #f3f5f9; --bg2: #ffffff; --card: #ffffff; --card2: #eef2f8;
+  --line: #e0e6ef; --txt: #14181f; --txt2: #5a6675; --txt3: #8b97a8;
+  --accent: #2563eb;
+}
+body.light .basecard { background: linear-gradient(150deg, #dbe7ff 0%, #ffffff 62%); }
+body.light .bigtime { color: #0d1420; }
+body.light .topbar { background: linear-gradient(180deg, var(--bg) 72%, rgba(243,245,249,0)); }
+body.light .field, body.light .search { color-scheme: light; }
+
+@media (min-width: 620px) {
+  .bigtime { font-size: 56px; }
+  .tcard .rtime { font-size: 23px; }
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🌐</span>
+      <span id="appTitle">世界时钟</span>
+    </div>
+    <div class="topactions">
+      <button class="iconbtn" id="btnLang" title="语言 / Language">中/EN</button>
+      <button class="iconbtn" id="btnSettings" title="设置">⚙️</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 我的位置 -->
+    <section class="basecard" id="baseCard">
+      <div class="basecard-head">
+        <span class="dot"></span>
+        <span id="baseLabel">我的位置</span>
+        <span class="spacer"></span>
+        <button class="linkbtn" id="btnPickBase">切换</button>
+      </div>
+      <div class="basecard-body">
+        <div class="bigtime" id="baseTime">--:--</div>
+        <div class="basemeta">
+          <div id="baseCity">—</div>
+          <div class="muted" id="baseSub">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 模式 -->
+    <div class="modeswitch" role="tablist">
+      <button class="modebtn active" data-mode="now" id="modeNow">实时</button>
+      <button class="modebtn" data-mode="wall" id="modeWall">指定时间</button>
+    </div>
+
+    <!-- 指定时间面板 -->
+    <section class="panel hidden" id="wallPanel">
+      <div class="panelrow">
+        <label class="chip" id="refChip">基准：我的位置</label>
+        <span class="spacer"></span>
+        <button class="linkbtn" id="btnPickRef">换基准城市</button>
+      </div>
+      <div class="panelrow">
+        <input type="date" id="inDate" class="field">
+        <input type="time" id="inTime" class="field">
+        <button class="linkbtn" id="btnResetNow">现在</button>
+      </div>
+      <div class="panelrow">
+        <span class="tiny muted" id="sliderVal">—</span>
+        <input type="range" id="timeSlider" min="0" max="1439" step="5" class="slider">
+      </div>
+      <div class="quickrow" id="quickRow"></div>
+    </section>
+
+    <!-- 目标列表 -->
+    <div class="listhead">
+      <span id="targetsTitle">对照城市</span>
+      <span class="spacer"></span>
+      <span class="tiny muted" id="targetCount"></span>
+    </div>
+    <section id="targetList" class="targets"></section>
+
+    <button class="addbtn" id="btnAdd">＋ <span id="addLabel">添加城市</span></button>
+    <div class="foot" id="foot"></div>
+  </main>
+</div>
+
+<!-- 城市选择器 -->
+<div class="sheet hidden" id="pickerSheet">
+  <div class="sheet-mask" data-close="picker"></div>
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <input class="search" id="pickerSearch" placeholder="搜索城市 / 时区">
+      <button class="linkbtn" data-close="picker">关闭</button>
+    </div>
+    <div class="picker-hint" id="pickerHint"></div>
+    <div class="picker-list" id="pickerList"></div>
+  </div>
+</div>
+
+<!-- 城市详情 -->
+<div class="sheet hidden" id="detailSheet">
+  <div class="sheet-mask" data-close="detail"></div>
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <strong id="detailTitle">—</strong>
+      <span class="spacer"></span>
+      <button class="linkbtn" data-close="detail">关闭</button>
+    </div>
+    <div class="detail-list" id="detailList"></div>
+  </div>
+</div>
+
+<!-- 设置 -->
+<div class="sheet hidden" id="setSheet">
+  <div class="sheet-mask" data-close="set"></div>
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <strong id="setTitle">设置</strong>
+      <span class="spacer"></span>
+      <button class="linkbtn" data-close="set">关闭</button>
+    </div>
+    <div class="set-list">
+      <div class="setrow">
+        <span id="setAuto">自动识别我的位置</span>
+        <button class="linkbtn" id="btnAutoLoc">识别</button>
+      </div>
+      <div class="setrow">
+        <span id="setFmt">24 小时制</span>
+        <button class="switchbtn" id="btnFmt">24h</button>
+      </div>
+      <div class="setrow">
+        <span id="setSec">显示秒</span>
+        <button class="switchbtn" id="btnSec">关</button>
+      </div>
+      <div class="setrow">
+        <span id="setTheme">深色主题</span>
+        <button class="switchbtn" id="btnTheme">暗</button>
+      </div>
+      <div class="setrow">
+        <span id="setAdvice">显示联系建议</span>
+        <button class="switchbtn" id="btnAdvice">开</button>
+      </div>
+      <div class="setrow">
+        <span id="setPreset">快速套用</span>
+        <span class="spacer"></span>
+      </div>
+      <div class="quickrow" id="presetRow"></div>
+      <div class="setrow danger">
+        <span id="setClear">清空所有对照城市</span>
+        <button class="linkbtn" id="btnClear">清空</button>
+      </div>
+      <div class="setrow about" id="aboutBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>window.WC_BUILD_REGION="intl";</script>
+<script>
+/* =========================================================
+ * 时间换算引擎 world-clock / engine.js
+ * 纯函数，无 DOM 依赖，可被浏览器、Android WebView、Node 复用
+ * 时区数据来自运行时 Intl（IANA tzdb），不依赖网络
+ * ========================================================= */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  root.WCEngine = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  /* ---------- 时区目录：常用城市（可在 App 内用“全部时区”补充） ---------- */
+  var CITY_TABLE = [
+    // 中国
+    { id: 'Asia/Shanghai', name: '北京', cn: '中国', en: 'China', flag: '🇨🇳' },
+    { id: 'Asia/Chongqing', name: '重庆', cn: '中国', en: 'China', flag: '🇨🇳', alias: 'Asia/Shanghai' },
+    { id: 'Asia/Urumqi', name: '乌鲁木齐', cn: '中国', en: 'China', flag: '🇨🇳' },
+    { id: 'Asia/Hong_Kong', name: '香港', cn: '中国', en: 'Hong Kong', flag: '🇭🇰' },
+    { id: 'Asia/Macau', name: '澳门', cn: '中国', en: 'Macau', flag: '🇲🇴' },
+    { id: 'Asia/Taipei', name: '台北', cn: '中国', en: 'Taiwan', flag: '🇹🇼' },
+    // 亚洲
+    { id: 'Asia/Tokyo', name: '东京', cn: '日本', en: 'Japan', flag: '🇯🇵' },
+    { id: 'Asia/Seoul', name: '首尔', cn: '韩国', en: 'Korea', flag: '🇰🇷' },
+    { id: 'Asia/Pyongyang', name: '平壤', cn: '朝鲜', en: 'DPRK', flag: '🇰🇵' },
+    { id: 'Asia/Singapore', name: '新加坡', cn: '新加坡', en: 'Singapore', flag: '🇸🇬' },
+    { id: 'Asia/Kuala_Lumpur', name: '吉隆坡', cn: '马来西亚', en: 'Malaysia', flag: '🇲🇾' },
+    { id: 'Asia/Bangkok', name: '曼谷', cn: '泰国', en: 'Thailand', flag: '🇹🇭' },
+    { id: 'Asia/Ho_Chi_Minh', name: '胡志明市', cn: '越南', en: 'Vietnam', flag: '🇻🇳' },
+    { id: 'Asia/Manila', name: '马尼拉', cn: '菲律宾', en: 'Philippines', flag: '🇵🇭' },
+    { id: 'Asia/Jakarta', name: '雅加达', cn: '印尼', en: 'Indonesia', flag: '🇮🇩' },
+    { id: 'Asia/Yangon', name: '仰光', cn: '缅甸', en: 'Myanmar', flag: '🇲🇲' },
+    { id: 'Asia/Phnom_Penh', name: '金边', cn: '柬埔寨', en: 'Cambodia', flag: '🇰🇭' },
+    { id: 'Asia/Vientiane', name: '万象', cn: '老挝', en: 'Laos', flag: '🇱🇦' },
+    { id: 'Asia/Dhaka', name: '达卡', cn: '孟加拉国', en: 'Bangladesh', flag: '🇧🇩' },
+    { id: 'Asia/Kolkata', name: '新德里', cn: '印度', en: 'India', flag: '🇮🇳' },
+    { id: 'Asia/Karachi', name: '卡拉奇', cn: '巴基斯坦', en: 'Pakistan', flag: '🇵🇰' },
+    { id: 'Asia/Kathmandu', name: '加德满都', cn: '尼泊尔', en: 'Nepal', flag: '🇳🇵' },
+    { id: 'Asia/Colombo', name: '科伦坡', cn: '斯里兰卡', en: 'Sri Lanka', flag: '🇱🇰' },
+    { id: 'Asia/Kabul', name: '喀布尔', cn: '阿富汗', en: 'Afghanistan', flag: '🇦🇫' },
+    { id: 'Asia/Tashkent', name: '塔什干', cn: '乌兹别克斯坦', en: 'Uzbekistan', flag: '🇺🇿' },
+    { id: 'Asia/Almaty', name: '阿拉木图', cn: '哈萨克斯坦', en: 'Kazakhstan', flag: '🇰🇿' },
+    { id: 'Asia/Tehran', name: '德黑兰', cn: '伊朗', en: 'Iran', flag: '🇮🇷' },
+    { id: 'Asia/Baghdad', name: '巴格达', cn: '伊拉克', en: 'Iraq', flag: '🇮🇶' },
+    { id: 'Asia/Riyadh', name: '利雅得', cn: '沙特', en: 'Saudi Arabia', flag: '🇸🇦' },
+    { id: 'Asia/Dubai', name: '迪拜', cn: '阿联酋', en: 'UAE', flag: '🇦🇪' },
+    { id: 'Asia/Jerusalem', name: '耶路撒冷', cn: '以色列', en: 'Israel', flag: '🇮🇱' },
+    { id: 'Asia/Beirut', name: '贝鲁特', cn: '黎巴嫩', en: 'Lebanon', flag: '🇱🇧' },
+    { id: 'Asia/Baku', name: '巴库', cn: '阿塞拜疆', en: 'Azerbaijan', flag: '🇦🇿' },
+    // 欧洲
+    { id: 'Europe/Moscow', name: '莫斯科', cn: '俄罗斯', en: 'Russia', flag: '🇷🇺' },
+    { id: 'Europe/Kyiv', name: '基辅', cn: '乌克兰', en: 'Ukraine', flag: '🇺🇦' },
+    { id: 'Europe/Istanbul', name: '伊斯坦布尔', cn: '土耳其', en: 'Turkey', flag: '🇹🇷' },
+    { id: 'Europe/Athens', name: '雅典', cn: '希腊', en: 'Greece', flag: '🇬🇷' },
+    { id: 'Europe/Helsinki', name: '赫尔辛基', cn: '芬兰', en: 'Finland', flag: '🇫🇮' },
+    { id: 'Europe/Bucharest', name: '布加勒斯特', cn: '罗马尼亚', en: 'Romania', flag: '🇷🇴' },
+    { id: 'Europe/Warsaw', name: '华沙', cn: '波兰', en: 'Poland', flag: '🇵🇱' },
+    { id: 'Europe/Berlin', name: '柏林', cn: '德国', en: 'Germany', flag: '🇩🇪' },
+    { id: 'Europe/Vienna', name: '维也纳', cn: '奥地利', en: 'Austria', flag: '🇦🇹' },
+    { id: 'Europe/Rome', name: '罗马', cn: '意大利', en: 'Italy', flag: '🇮🇹' },
+    { id: 'Europe/Zurich', name: '苏黎世', cn: '瑞士', en: 'Switzerland', flag: '🇨🇭' },
+    { id: 'Europe/Paris', name: '巴黎', cn: '法国', en: 'France', flag: '🇫🇷' },
+    { id: 'Europe/Brussels', name: '布鲁塞尔', cn: '比利时', en: 'Belgium', flag: '🇧🇪' },
+    { id: 'Europe/Amsterdam', name: '阿姆斯特丹', cn: '荷兰', en: 'Netherlands', flag: '🇳🇱' },
+    { id: 'Europe/Madrid', name: '马德里', cn: '西班牙', en: 'Spain', flag: '🇪🇸' },
+    { id: 'Europe/Lisbon', name: '里斯本', cn: '葡萄牙', en: 'Portugal', flag: '🇵🇹' },
+    { id: 'Europe/London', name: '伦敦', cn: '英国', en: 'UK', flag: '🇬🇧' },
+    { id: 'Europe/Dublin', name: '都柏林', cn: '爱尔兰', en: 'Ireland', flag: '🇮🇪' },
+    { id: 'Europe/Stockholm', name: '斯德哥尔摩', cn: '瑞典', en: 'Sweden', flag: '🇸🇪' },
+    { id: 'Europe/Oslo', name: '奥斯陆', cn: '挪威', en: 'Norway', flag: '🇳🇴' },
+    { id: 'Europe/Copenhagen', name: '哥本哈根', cn: '丹麦', en: 'Denmark', flag: '🇩🇰' },
+    { id: 'Europe/Prague', name: '布拉格', cn: '捷克', en: 'Czechia', flag: '🇨🇿' },
+    { id: 'Europe/Budapest', name: '布达佩斯', cn: '匈牙利', en: 'Hungary', flag: '🇭🇺' },
+    { id: 'Atlantic/Reykjavik', name: '雷克雅未克', cn: '冰岛', en: 'Iceland', flag: '🇮🇸' },
+    // 非洲
+    { id: 'Africa/Cairo', name: '开罗', cn: '埃及', en: 'Egypt', flag: '🇪🇬' },
+    { id: 'Africa/Johannesburg', name: '约翰内斯堡', cn: '南非', en: 'South Africa', flag: '🇿🇦' },
+    { id: 'Africa/Lagos', name: '拉各斯', cn: '尼日利亚', en: 'Nigeria', flag: '🇳🇬' },
+    { id: 'Africa/Nairobi', name: '内罗毕', cn: '肯尼亚', en: 'Kenya', flag: '🇰🇪' },
+    { id: 'Africa/Casablanca', name: '卡萨布兰卡', cn: '摩洛哥', en: 'Morocco', flag: '🇲🇦' },
+    { id: 'Africa/Addis_Ababa', name: '亚的斯亚贝巴', cn: '埃塞俄比亚', en: 'Ethiopia', flag: '🇪🇹' },
+    // 美洲
+    { id: 'America/New_York', name: '纽约', cn: '美国', en: 'USA', flag: '🇺🇸' },
+    { id: 'America/Chicago', name: '芝加哥', cn: '美国', en: 'USA', flag: '🇺🇸' },
+    { id: 'America/Denver', name: '丹佛', cn: '美国', en: 'USA', flag: '🇺🇸' },
+    { id: 'America/Phoenix', name: '凤凰城', cn: '美国', en: 'USA', flag: '🇺🇸' },
+    { id: 'America/Los_Angeles', name: '洛杉矶', cn: '美国', en: 'USA', flag: '🇺🇸' },
+    { id: 'America/Anchorage', name: '安克雷奇', cn: '美国', en: 'USA', flag: '🇺🇸' },
+    { id: 'Pacific/Honolulu', name: '檀香山', cn: '美国', en: 'USA', flag: '🇺🇸' },
+    { id: 'America/Toronto', name: '多伦多', cn: '加拿大', en: 'Canada', flag: '🇨🇦' },
+    { id: 'America/Vancouver', name: '温哥华', cn: '加拿大', en: 'Canada', flag: '🇨🇦' },
+    { id: 'America/Mexico_City', name: '墨西哥城', cn: '墨西哥', en: 'Mexico', flag: '🇲🇽' },
+    { id: 'America/Havana', name: '哈瓦那', cn: '古巴', en: 'Cuba', flag: '🇨🇺' },
+    { id: 'America/Bogota', name: '波哥大', cn: '哥伦比亚', en: 'Colombia', flag: '🇨🇴' },
+    { id: 'America/Lima', name: '利马', cn: '秘鲁', en: 'Peru', flag: '🇵🇪' },
+    { id: 'America/Santiago', name: '圣地亚哥', cn: '智利', en: 'Chile', flag: '🇨🇱' },
+    { id: 'America/Sao_Paulo', name: '圣保罗', cn: '巴西', en: 'Brazil', flag: '🇧🇷' },
+    { id: 'America/Buenos_Aires', name: '布宜诺斯艾利斯', cn: '阿根廷', en: 'Argentina', flag: '🇦🇷' },
+    { id: 'America/Caracas', name: '加拉加斯', cn: '委内瑞拉', en: 'Venezuela', flag: '🇻🇪' },
+    // 大洋洲
+    { id: 'Australia/Perth', name: '珀斯', cn: '澳大利亚', en: 'Australia', flag: '🇦🇺' },
+    { id: 'Australia/Adelaide', name: '阿德莱德', cn: '澳大利亚', en: 'Australia', flag: '🇦🇺' },
+    { id: 'Australia/Brisbane', name: '布里斯班', cn: '澳大利亚', en: 'Australia', flag: '🇦🇺' },
+    { id: 'Australia/Sydney', name: '悉尼', cn: '澳大利亚', en: 'Australia', flag: '🇦🇺' },
+    { id: 'Australia/Melbourne', name: '墨尔本', cn: '澳大利亚', en: 'Australia', flag: '🇦🇺' },
+    { id: 'Pacific/Auckland', name: '奥克兰', cn: '新西兰', en: 'New Zealand', flag: '🇳🇿' },
+    { id: 'Pacific/Fiji', name: '苏瓦', cn: '斐济', en: 'Fiji', flag: '🇫🇯' },
+    // 特殊时区
+    { id: 'UTC', name: 'UTC', cn: '协调世界时', en: 'Universal Time', flag: '🌐' }
+  ];
+
+  /* ---------- 英文城市名（用于英文搜索/英文界面） ---------- */
+  var pad2 = function (n) { return n < 10 ? '0' + n : '' + n; };
+  var EN_CITY = {
+    'Asia/Shanghai': 'Shanghai Beijing', 'Asia/Chongqing': 'Chongqing', 'Asia/Urumqi': 'Urumqi',
+    'Asia/Hong_Kong': 'Hong Kong', 'Asia/Macau': 'Macau Macao', 'Asia/Taipei': 'Taipei',
+    'Asia/Tokyo': 'Tokyo', 'Asia/Seoul': 'Seoul', 'Asia/Pyongyang': 'Pyongyang',
+    'Asia/Singapore': 'Singapore', 'Asia/Kuala_Lumpur': 'Kuala Lumpur', 'Asia/Bangkok': 'Bangkok',
+    'Asia/Ho_Chi_Minh': 'Ho Chi Minh Saigon', 'Asia/Manila': 'Manila', 'Asia/Jakarta': 'Jakarta',
+    'Asia/Yangon': 'Yangon Rangoon', 'Asia/Phnom_Penh': 'Phnom Penh', 'Asia/Vientiane': 'Vientiane',
+    'Asia/Dhaka': 'Dhaka', 'Asia/Kolkata': 'Kolkata New Delhi Mumbai', 'Asia/Karachi': 'Karachi',
+    'Asia/Kathmandu': 'Kathmandu', 'Asia/Colombo': 'Colombo', 'Asia/Kabul': 'Kabul',
+    'Asia/Tashkent': 'Tashkent', 'Asia/Almaty': 'Almaty', 'Asia/Tehran': 'Tehran',
+    'Asia/Baghdad': 'Baghdad', 'Asia/Riyadh': 'Riyadh', 'Asia/Dubai': 'Dubai', 'Asia/Jerusalem': 'Jerusalem',
+    'Asia/Beirut': 'Beirut', 'Asia/Baku': 'Baku',
+    'Europe/Moscow': 'Moscow', 'Europe/Kyiv': 'Kyiv Kiev', 'Europe/Istanbul': 'Istanbul',
+    'Europe/Athens': 'Athens', 'Europe/Helsinki': 'Helsinki', 'Europe/Bucharest': 'Bucharest',
+    'Europe/Warsaw': 'Warsaw', 'Europe/Berlin': 'Berlin', 'Europe/Vienna': 'Vienna',
+    'Europe/Rome': 'Rome', 'Europe/Zurich': 'Zurich', 'Europe/Paris': 'Paris',
+    'Europe/Brussels': 'Brussels', 'Europe/Amsterdam': 'Amsterdam', 'Europe/Madrid': 'Madrid',
+    'Europe/Lisbon': 'Lisbon', 'Europe/London': 'London', 'Europe/Dublin': 'Dublin',
+    'Europe/Stockholm': 'Stockholm', 'Europe/Oslo': 'Oslo', 'Europe/Copenhagen': 'Copenhagen',
+    'Europe/Prague': 'Prague', 'Europe/Budapest': 'Budapest', 'Atlantic/Reykjavik': 'Reykjavik',
+    'Africa/Cairo': 'Cairo', 'Africa/Johannesburg': 'Johannesburg Cape Town', 'Africa/Lagos': 'Lagos',
+    'Africa/Nairobi': 'Nairobi', 'Africa/Casablanca': 'Casablanca', 'Africa/Addis_Ababa': 'Addis Ababa',
+    'America/New_York': 'New York NYC Washington Boston', 'America/Chicago': 'Chicago Dallas Houston',
+    'America/Denver': 'Denver', 'America/Phoenix': 'Phoenix', 'America/Los_Angeles': 'Los Angeles LA San Francisco Seattle',
+    'America/Anchorage': 'Anchorage', 'Pacific/Honolulu': 'Honolulu Hawaii',
+    'America/Toronto': 'Toronto', 'America/Vancouver': 'Vancouver', 'America/Mexico_City': 'Mexico City',
+    'America/Havana': 'Havana', 'America/Bogota': 'Bogota', 'America/Lima': 'Lima',
+    'America/Santiago': 'Santiago', 'America/Sao_Paulo': 'Sao Paulo', 'America/Buenos_Aires': 'Buenos Aires',
+    'America/Caracas': 'Caracas',
+    'Australia/Perth': 'Perth', 'Australia/Adelaide': 'Adelaide', 'Australia/Brisbane': 'Brisbane',
+    'Australia/Sydney': 'Sydney', 'Australia/Melbourne': 'Melbourne',
+    'Pacific/Auckland': 'Auckland', 'Pacific/Fiji': 'Suva Fiji', 'UTC': 'UTC GMT'
+  };
+
+
+  /* ---------- 英文短名（界面展示用） ---------- */
+  var EN_NAME = {
+    'Asia/Shanghai': 'Beijing', 'Asia/Chongqing': 'Chongqing', 'Asia/Urumqi': 'Urumqi',
+    'Asia/Hong_Kong': 'Hong Kong', 'Asia/Macau': 'Macau', 'Asia/Taipei': 'Taipei',
+    'Asia/Tokyo': 'Tokyo', 'Asia/Seoul': 'Seoul', 'Asia/Pyongyang': 'Pyongyang',
+    'Asia/Singapore': 'Singapore', 'Asia/Kuala_Lumpur': 'Kuala Lumpur', 'Asia/Bangkok': 'Bangkok',
+    'Asia/Ho_Chi_Minh': 'Ho Chi Minh City', 'Asia/Manila': 'Manila', 'Asia/Jakarta': 'Jakarta',
+    'Asia/Yangon': 'Yangon', 'Asia/Phnom_Penh': 'Phnom Penh', 'Asia/Vientiane': 'Vientiane',
+    'Asia/Dhaka': 'Dhaka', 'Asia/Kolkata': 'New Delhi', 'Asia/Karachi': 'Karachi',
+    'Asia/Kathmandu': 'Kathmandu', 'Asia/Colombo': 'Colombo', 'Asia/Kabul': 'Kabul',
+    'Asia/Tashkent': 'Tashkent', 'Asia/Almaty': 'Almaty', 'Asia/Tehran': 'Tehran',
+    'Asia/Baghdad': 'Baghdad', 'Asia/Riyadh': 'Riyadh', 'Asia/Dubai': 'Dubai',
+    'Asia/Jerusalem': 'Jerusalem', 'Asia/Beirut': 'Beirut', 'Asia/Baku': 'Baku',
+    'Europe/Moscow': 'Moscow', 'Europe/Kyiv': 'Kyiv', 'Europe/Istanbul': 'Istanbul',
+    'Europe/Athens': 'Athens', 'Europe/Helsinki': 'Helsinki', 'Europe/Bucharest': 'Bucharest',
+    'Europe/Warsaw': 'Warsaw', 'Europe/Berlin': 'Berlin', 'Europe/Vienna': 'Vienna',
+    'Europe/Rome': 'Rome', 'Europe/Zurich': 'Zurich', 'Europe/Paris': 'Paris',
+    'Europe/Brussels': 'Brussels', 'Europe/Amsterdam': 'Amsterdam', 'Europe/Madrid': 'Madrid',
+    'Europe/Lisbon': 'Lisbon', 'Europe/London': 'London', 'Europe/Dublin': 'Dublin',
+    'Europe/Stockholm': 'Stockholm', 'Europe/Oslo': 'Oslo', 'Europe/Copenhagen': 'Copenhagen',
+    'Europe/Prague': 'Prague', 'Europe/Budapest': 'Budapest', 'Atlantic/Reykjavik': 'Reykjavik',
+    'Africa/Cairo': 'Cairo', 'Africa/Johannesburg': 'Johannesburg', 'Africa/Lagos': 'Lagos',
+    'Africa/Nairobi': 'Nairobi', 'Africa/Casablanca': 'Casablanca', 'Africa/Addis_Ababa': 'Addis Ababa',
+    'America/New_York': 'New York', 'America/Chicago': 'Chicago', 'America/Denver': 'Denver',
+    'America/Phoenix': 'Phoenix', 'America/Los_Angeles': 'Los Angeles', 'America/Anchorage': 'Anchorage',
+    'Pacific/Honolulu': 'Honolulu', 'America/Toronto': 'Toronto', 'America/Vancouver': 'Vancouver',
+    'America/Mexico_City': 'Mexico City', 'America/Havana': 'Havana', 'America/Bogota': 'Bogota',
+    'America/Lima': 'Lima', 'America/Santiago': 'Santiago', 'America/Sao_Paulo': 'Sao Paulo',
+    'America/Buenos_Aires': 'Buenos Aires', 'America/Caracas': 'Caracas',
+    'Australia/Perth': 'Perth', 'Australia/Adelaide': 'Adelaide', 'Australia/Brisbane': 'Brisbane',
+    'Australia/Sydney': 'Sydney', 'Australia/Melbourne': 'Melbourne',
+    'Pacific/Auckland': 'Auckland', 'Pacific/Fiji': 'Suva', 'UTC': 'UTC'
+  };
+
+  /* ---------- 旧时区别名 → 现用名 ----------
+     Android WebView / 部分系统时区库会返回 Asia/Calcutta、Asia/Saigon、Europe/Kiev
+     这类老名字，统一折算成 CITY_TABLE 里的现用名，否则查不到城市、国旗、国家 */
+  var TZ_ALIAS = {
+    'Asia/Calcutta': 'Asia/Kolkata',
+    'Asia/Saigon': 'Asia/Ho_Chi_Minh',
+    'Asia/Katmandu': 'Asia/Kathmandu',
+    'Asia/Rangoon': 'Asia/Yangon',
+    'Asia/Dacca': 'Asia/Dhaka',
+    'Asia/Chungking': 'Asia/Chongqing',
+    'Asia/Macao': 'Asia/Macau',
+    'Asia/Ulan_Bator': 'Asia/Ulaanbaatar',
+    'Europe/Kiev': 'Europe/Kyiv',
+    'US/Eastern': 'America/New_York',
+    'US/Central': 'America/Chicago',
+    'US/Mountain': 'America/Denver',
+    'US/Pacific': 'America/Los_Angeles',
+    'US/Alaska': 'America/Anchorage',
+    'US/Hawaii': 'Pacific/Honolulu',
+    'Canada/Atlantic': 'America/Halifax',
+    'Canada/Eastern': 'America/Toronto',
+    'Canada/Central': 'America/Winnipeg',
+    'Canada/Mountain': 'America/Edmonton',
+    'Canada/Pacific': 'America/Vancouver',
+    'Mexico/General': 'America/Mexico_City',
+    'Brazil/East': 'America/Sao_Paulo',
+    'Brazil/West': 'America/Manaus',
+    'Brazil/Acre': 'America/Rio_Branco',
+    'Chile/Continental': 'America/Santiago',
+    'Cuba': 'America/Havana',
+    'Egypt': 'Africa/Cairo',
+    'Israel': 'Asia/Jerusalem',
+    'Iran': 'Asia/Tehran',
+    'Iraq': 'Asia/Baghdad',
+    'Turkey': 'Europe/Istanbul',
+    'Poland': 'Europe/Warsaw',
+    'Portugal': 'Europe/Lisbon',
+    'Iceland': 'Atlantic/Reykjavik',
+    'GB': 'Europe/London',
+    'GB-Eire': 'Europe/London',
+    'Eire': 'Europe/Dublin',
+    'NZ': 'Pacific/Auckland',
+    'Japan': 'Asia/Tokyo',
+    'Singapore': 'Asia/Singapore',
+    'Hongkong': 'Asia/Hong_Kong',
+    'PRC': 'Asia/Shanghai',
+    'ROC': 'Asia/Taipei',
+    'ROK': 'Asia/Seoul',
+    'W-SU': 'Europe/Moscow',
+    'Australia/ACT': 'Australia/Sydney',
+    'Australia/NSW': 'Australia/Sydney',
+    'Australia/Victoria': 'Australia/Melbourne',
+    'Australia/Queensland': 'Australia/Brisbane',
+    'Australia/West': 'Australia/Perth',
+    'Australia/South': 'Australia/Adelaide'
+  };
+
+  function canonTz(tz) {
+    if (!tz) return tz;
+    return TZ_ALIAS[tz] || tz;
+  }
+
+  /* ---------- 时区有效性（Android WebView / 老浏览器时区库可能缺项） ---------- */
+  var tzValidCache = {};
+  function isValidTz(tz) {
+    if (!tz) return false;
+    if (tzValidCache[tz] !== undefined) return tzValidCache[tz];
+    var ok = false;
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date());
+      ok = true;
+    } catch (e) { ok = false; }
+    tzValidCache[tz] = ok;
+    return ok;
+  }
+
+  /* ---------- formatToParts 兼容层 ----------
+     formatToParts 是 Chrome 57 / Safari 11 才有的。Android 5–6 的原生 WebView、
+     老 UC/QQ 浏览器内核没有它，而整个引擎靠它取时区字段。
+     这里用 format() 的 en-US 固定输出反向解析，保证老设备也能算。 */
+  var HAS_PARTS = (function () {
+    try {
+      return typeof Intl.DateTimeFormat.prototype.formatToParts === 'function' &&
+             typeof new Intl.DateTimeFormat('en-US', { timeZone: 'UTC' }).formatToParts === 'function';
+    } catch (e) { return false; }
+  })();
+
+  /* en-US + hour12:false 的 format() 输出形如 "11/25/2026, 22:31:07" */
+  var RE_US = /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i;
+
+  function partsOf(dtf, date) {
+    if (HAS_PARTS) {
+      var p = {};
+      dtf.formatToParts(date).forEach(function (x) { if (x.type !== 'literal') p[x.type] = x.value; });
+      return p;
+    }
+    var s = dtf.format(date).replace(/\u202f|\u00a0/g, ' ');
+    var m = RE_US.exec(s);
+    if (!m) return {};
+    var h = parseInt(m[4], 10);
+    var ap = (m[7] || '').toUpperCase();
+    if (ap === 'PM' && h < 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return {
+      month: m[1], day: m[2], year: m[3],
+      hour: String(h), minute: m[5], second: m[6] || '00'
+    };
+  }
+
+  /* ---------- 时区偏移（分钟，东正西负） ---------- */
+  function offsetMinutes(tz, date) {
+    date = date || new Date();
+    if (!isValidTz(tz)) return 0;
+    try {
+      var dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      var p = partsOf(dtf, date);
+      if (!p.year) return 0;
+      var asUTC = Date.UTC(
+        parseInt(p.year, 10), parseInt(p.month, 10) - 1, parseInt(p.day, 10),
+        parseInt(p.hour === '24' ? '00' : p.hour, 10), parseInt(p.minute, 10), parseInt(p.second, 10)
+      );
+      return Math.round((asUTC - Math.floor(date.getTime() / 1000) * 1000) / 60000);
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /* ---------- 取某时区的日期各部分 ---------- */
+  function partsIn(tz, date) {
+    date = date || new Date();
+    if (!isValidTz(tz)) tz = 'UTC';
+    /* 注意：不能带 weekday —— 降级路径用 format() 正则解析，带上星期会破坏格式 */
+    var dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    var p = partsOf(dtf, date);
+    var hour = parseInt(p.hour, 10); if (hour === 24) hour = 0;
+    return {
+      tz: tz,
+      year: parseInt(p.year, 10), month: parseInt(p.month, 10), day: parseInt(p.day, 10),
+      hour: hour, minute: parseInt(p.minute, 10), second: parseInt(p.second, 10),
+      weekday: weekdayOf(tz, date)
+    };
+  }
+
+  /* 星期：老内核没有 formatToParts 时靠偏移反推 */
+  function weekdayOf(tz, date) {
+    var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    if (HAS_PARTS) {
+      try {
+        var wd = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(date);
+        if (names.indexOf(wd) >= 0) return wd;
+      } catch (e) {}
+    }
+    var localMs = date.getTime() + offsetMinutes(tz, date) * 60000;
+    return names[new Date(localMs).getUTCDay()];
+  }
+
+  /* ---------- 偏移格式化：+08:00 / -03:30 / UTC ---------- */
+  function formatOffset(mins, withPrefix) {
+    if (mins === 0) return withPrefix === false ? '0' : 'UTC';
+    var sign = mins > 0 ? '+' : '-';
+    var a = Math.abs(mins);
+    var s = sign + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60);
+    return withPrefix === false ? s : 'UTC' + s;
+  }
+
+  function offsetLabelCN(mins) {
+    var sign = mins >= 0 ? '东' : '西';
+    var a = Math.abs(mins);
+    var h = Math.floor(a / 60), m = a % 60;
+    return sign + (h ? h + '时' : '') + (m ? m + '分' : '') + (h || m ? '' : '零');
+  }
+
+  /* ---------- 夏令时判定 ---------- */
+  function isDST(tz, date) {
+    date = date || new Date();
+    if (tz === 'UTC') return false;
+    var y = date.getUTCFullYear();
+    var jan = offsetMinutes(tz, new Date(Date.UTC(y, 0, 1, 12)));
+    var jul = offsetMinutes(tz, new Date(Date.UTC(y, 6, 1, 12)));
+    var std = Math.min(jan, jul);
+    return offsetMinutes(tz, date) > std;
+  }
+
+  /* ---------- 把“某时区的墙上时间”换算成真实时刻 ---------- */
+  function wallTimeToDate(tz, y, mo, d, h, mi) {
+    var guess = Date.UTC(y, mo - 1, d, h, mi, 0);
+    var off1 = offsetMinutes(tz, new Date(guess));
+    var t1 = guess - off1 * 60000;
+    var off2 = offsetMinutes(tz, new Date(t1));
+    var t2 = guess - off2 * 60000;
+    return new Date(t2);
+  }
+
+  /* ---------- 格式化 ---------- */
+  function fmtHM(p) { return pad2(p.hour) + ':' + pad2(p.minute); }
+  function fmtHMS(p) { return fmtHM(p) + ':' + pad2(p.second); }
+  function fmtDate(p) { return p.year + '-' + pad2(p.month) + '-' + pad2(p.day); }
+  function fmtDateCN(p) { return (p.month) + '月' + p.day + '日'; }
+  function fmtDateEN(p) {
+    var M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return M[p.month - 1] + ' ' + p.day;
+  }
+  var WK = { Mon: '周一', Tue: '周二', Wed: '周三', Thu: '周四', Fri: '周五', Sat: '周六', Sun: '周日' };
+  function fmtWeekCN(p) { return WK[p.weekday] || p.weekday; }
+
+  /* ---------- 两个时区的“天差” ---------- */
+  function dayDiff(base, other) {
+    var a = Date.UTC(base.year, base.month - 1, base.day);
+    var b = Date.UTC(other.year, other.month - 1, other.day);
+    return Math.round((b - a) / 86400000);
+  }
+  function dayDiffLabel(n) {
+    if (n === 0) return '同一天';
+    return n > 0 ? '明天' : '昨天';
+  }
+
+  /* ---------- 日内时段描述 ---------- */
+  function phaseOfHour(h) {
+    if (h >= 0 && h < 6) return { key: 'night', cn: '凌晨', icon: '🌙' };
+    if (h < 9) return { key: 'morning', cn: '早上', icon: '🌅' };
+    if (h < 12) return { key: 'forenoon', cn: '上午', icon: '☀️' };
+    if (h < 14) return { key: 'noon', cn: '中午', icon: '🍚' };
+    if (h < 18) return { key: 'afternoon', cn: '下午', icon: '🌤️' };
+    if (h < 22) return { key: 'evening', cn: '晚上', icon: '🌆' };
+    return { key: 'night', cn: '深夜', icon: '🌙' };
+  }
+
+  /* ---------- 是否适合打扰（联系建议） ---------- */
+  function contactAdvice(h) {
+    if (h >= 8 && h < 22) return { ok: true, cn: '适合联系', key: 'ok' };
+    if (h >= 22 || h < 7) return { ok: false, cn: '对方可能已休息', key: 'sleep' };
+    return { ok: null, cn: '比较早，慎重联系', key: 'warn' };
+  }
+
+  /* ---------- 核心换算 ---------- */
+  /**
+   * @param {Object} opt
+   *   baseTz   基准时区（用户所在地）
+   *   targets  目标时区数组
+   *   mode     'now' | 'wall' | 'instant'
+   *   wall     {y,mo,d,h,mi} 当 mode==='wall' 时使用（以 baseTz 的墙上时间为准）
+   *   instant  Date 当 mode==='instant'
+   */
+  function compute(opt) {
+    var baseTz = opt.baseTz || 'Asia/Shanghai';
+    var targets = opt.targets || [];
+    var instant;
+    if (opt.mode === 'wall' && opt.wall) {
+      var w = opt.wall;
+      instant = wallTimeToDate(baseTz, w.y, w.mo, w.d, w.h, w.mi);
+    } else if (opt.mode === 'instant' && opt.instant) {
+      instant = new Date(opt.instant);
+    } else {
+      instant = new Date();
+    }
+
+    var baseP = partsIn(baseTz, instant);
+    var baseOff = offsetMinutes(baseTz, instant);
+    var rows = targets.map(function (tz) {
+      var p = partsIn(tz, instant);
+      var off = offsetMinutes(tz, instant);
+      return {
+        tz: tz,
+        parts: p,
+        offset: off,
+        offsetText: formatOffset(off),
+        diffFromBase: off - baseOff,
+        dayDiff: dayDiff(baseP, p),
+        dayDiffLabel: dayDiffLabel(dayDiff(baseP, p)),
+        dst: isDST(tz, instant),
+        phase: phaseOfHour(p.hour),
+        advice: contactAdvice(p.hour),
+        time: fmtHM(p),
+        seconds: fmtHMS(p),
+        date: fmtDate(p),
+        dateCN: fmtDateCN(p),
+        dateEN: fmtDateEN(p),
+        week: fmtWeekCN(p),
+        weekEN: p.weekday
+      };
+    });
+
+    return {
+      instant: instant,
+      baseTz: baseTz,
+      base: {
+        tz: baseTz,
+        parts: baseP,
+        offset: baseOff,
+        offsetText: formatOffset(baseOff),
+        dst: isDST(baseTz, instant),
+        phase: phaseOfHour(baseP.hour),
+        time: fmtHM(baseP),
+        seconds: fmtHMS(baseP),
+        date: fmtDate(baseP),
+        dateCN: fmtDateCN(baseP),
+        dateEN: fmtDateEN(baseP),
+        week: fmtWeekCN(baseP),
+        weekEN: baseP.weekday
+      },
+      rows: rows
+    };
+  }
+
+  /* ---------- 常用时区查询 ---------- */
+  function listTimeZones() {
+    var all = [];
+    try {
+      if (typeof Intl.supportedValuesOf === 'function') all = Intl.supportedValuesOf('timeZone');
+    } catch (e) { all = []; }
+    if (!all.length) {
+      all = CITY_TABLE.map(function (c) { return c.id; });
+    }
+    return all;
+  }
+
+  function cityInfo(tz) {
+    tz = canonTz(tz);
+    for (var i = 0; i < CITY_TABLE.length; i++) {
+      if (CITY_TABLE[i].id === tz) {
+        var hit = CITY_TABLE[i];
+        return {
+          id: hit.id, name: hit.name, cn: hit.cn, en: hit.en, flag: hit.flag,
+          enName: EN_NAME[tz] || hit.name
+        };
+      }
+    }
+    var city = (tz || '').split('/').pop().replace(/_/g, ' ');
+    return { id: tz, name: city, cn: '', en: '', flag: '🌍', enName: EN_NAME[tz] || city };
+  }
+
+  function cityLabel(tz) {
+    var c = cityInfo(tz);
+    return c.cn ? c.cn + ' · ' + c.name : c.name;
+  }
+  function cityLabelEn(tz) {
+    var c = cityInfo(tz);
+    if (tz === 'UTC') return 'UTC';
+    return c.enName || c.name;
+  }
+
+  /* ---------- 搜索时区 ---------- */
+  function norm(s) {
+    return String(s || '').toLowerCase().replace(/[\s_\-\/·.]+/g, '');
+  }
+  function searchZones(q, limit) {
+    limit = limit || 30;
+    q = (q || '').trim();
+    var pool = CITY_TABLE.slice();
+    listTimeZones().forEach(function (tz) {
+      if (!isValidTz(tz)) return;
+      if (!pool.some(function (c) { return c.id === tz; })) {
+        var city = tz.split('/').pop().replace(/_/g, ' ');
+        pool.push({ id: tz, name: city, cn: '', en: tz, flag: '🌍' });
+      }
+    });
+    if (!q) return pool.slice(0, limit);
+    var nq = norm(q);
+    var hit = pool.filter(function (c) {
+      var hay = norm(c.id + ' ' + c.name + ' ' + (c.cn || '') + ' ' + (c.en || '') + ' ' + (EN_CITY[c.id] || ''));
+      return hay.indexOf(nq) >= 0;
+    });
+    return hit.slice(0, limit);
+  }
+
+  /* ---------- 时区“城市时间”排序稳定性：按偏移 ---------- */
+  function sortByOffset(rows) {
+    return rows.slice().sort(function (a, b) { return b.offset - a.offset; });
+  }
+
+  /* ---------- 预设组合 ---------- */
+  var PRESETS = {
+    'us': { name: '美国主要城市', tz: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles'] },
+    'eu': { name: '欧洲主要城市', tz: ['Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow'] },
+    'asia': { name: '亚洲主要城市', tz: ['Asia/Tokyo', 'Asia/Seoul', 'Asia/Singapore', 'Asia/Dubai'] },
+    'game': { name: '游戏服务器', tz: ['America/Los_Angeles', 'Europe/London', 'Asia/Tokyo', 'Asia/Shanghai'] },
+    'world': { name: '环球一圈', tz: ['Pacific/Auckland', 'Asia/Shanghai', 'Europe/London', 'America/New_York', 'America/Los_Angeles'] }
+  };
+
+  return {
+    CITY_TABLE: CITY_TABLE,
+    PRESETS: PRESETS,
+    offsetMinutes: offsetMinutes,
+    partsIn: partsIn,
+    formatOffset: formatOffset,
+    offsetLabelCN: offsetLabelCN,
+    isDST: isDST,
+    wallTimeToDate: wallTimeToDate,
+    fmtHM: fmtHM,
+    fmtHMS: fmtHMS,
+    fmtDate: fmtDate,
+    fmtDateCN: fmtDateCN,
+    fmtDateEN: fmtDateEN,
+    fmtWeekCN: fmtWeekCN,
+    dayDiff: dayDiff,
+    dayDiffLabel: dayDiffLabel,
+    phaseOfHour: phaseOfHour,
+    contactAdvice: contactAdvice,
+    compute: compute,
+    listTimeZones: listTimeZones,
+    cityInfo: cityInfo,
+    cityLabel: cityLabel,
+    canonTz: canonTz,
+    TZ_ALIAS: TZ_ALIAS,
+    cityLabelEn: cityLabelEn,
+    searchZones: searchZones,
+    sortByOffset: sortByOffset,
+    pad2: pad2
+  };
+});
+
+</script>
+<script>
+/* ================= 世界时钟 · 交互层 ================= */
+(function () {
+  'use strict';
+  var E = window.WCEngine;
+
+  /* ---------------- 老内核补丁 ----------------
+     Android 5/6 的 WebView 与部分国产内核：
+       - NodeList 没有 forEach
+       - Element.closest 不存在
+     这两者在本文件里用得很多，先补齐再继续。 */
+  if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
+    NodeList.prototype.forEach = Array.prototype.forEach;
+  }
+  if (typeof Element !== 'undefined' && !Element.prototype.closest) {
+    Element.prototype.closest = function (sel) {
+      var node = this;
+      while (node && node.nodeType === 1) {
+        if ((node.matches || node.msMatchesSelector || node.webkitMatchesSelector).call(node, sel)) return node;
+        node = node.parentElement;
+      }
+      return null;
+    };
+  }
+  if (typeof Object.assign !== 'function') {
+    Object.assign = function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var src = arguments[i];
+        if (!src) continue;
+        for (var k in src) if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+      return target;
+    };
+  }
+
+  /* ---------------- 多语言 ---------------- */
+  var I18N = {
+    zh: {
+      title: '世界时钟', myloc: '我的位置', switch: '切换', targets: '对照城市',
+      now: '实时', wall: '指定时间', base: '基准', changeBase: '换基准城市',
+      add: '添加城市', empty: '还没有对照城市\n点下面按钮添加，例如：纽约、伦敦、东京',
+      search: '搜索城市 / 时区', close: '关闭', settings: '设置',
+      autoLoc: '自动识别我的位置', detect: '识别', fmt24: '24 小时制', sec: '显示秒',
+      advice: '显示联系建议', preset: '快速套用', clear: '清空所有对照城市', clr: '清空',
+      theme: '深色主题', dark: '暗', light: '亮',
+      sameDay: '同一天', tomorrow: '明天', yesterday: '昨天', daysAhead: '天后', daysBefore: '天前',
+      okContact: '适合联系', sleep: '休息中', warnContact: '偏早',
+      dst: '夏令时', std: '标准时', diff: '时差', sameAsBase: '与基准同步', hoursAhead: '小时', hoursBehind: '小时',
+      detail: '城市详情', remove: '从对照列表移除', addTo: '加入对照', inBase: '已加入',
+      monthOffset: '全年偏移变化', dayMap: '当天逐时对照', reset: '现在',
+      about: '时区数据来自系统 IANA 时区库，自动处理夏令时（DST）。\n所有换算在本机完成，不联网、不收集任何信息。',
+      copied: '已复制', tipPick: '这是基准城市', tipAdd: '选择要对照的城市',
+      ph: '例如 New York / 纽约 / Europe', lang: '语言',
+      refBase: '基准：我的位置', noResult: '没有匹配的城市'
+    },
+    en: {
+      title: 'World Clock', myloc: 'My location', switch: 'Change', targets: 'Cities',
+      now: 'Live', wall: 'Pick a time', base: 'Base', changeBase: 'Change base city',
+      add: 'Add city', empty: 'No cities yet\nTap below to add, e.g. New York, London, Tokyo',
+      search: 'Search city / timezone', close: 'Close', settings: 'Settings',
+      autoLoc: 'Detect my location', detect: 'Detect', fmt24: '24-hour', sec: 'Show seconds',
+      advice: 'Show contact advice', preset: 'Quick presets', clear: 'Clear all cities', clr: 'Clear',
+      theme: 'Dark theme', dark: 'Dark', light: 'Light',
+      sameDay: 'same day', tomorrow: 'tomorrow', yesterday: 'yesterday', daysAhead: ' days ahead', daysBefore: ' days behind',
+      okContact: 'Good time to call', sleep: 'Likely asleep', warnContact: 'Quite early',
+      dst: 'DST', std: 'Standard', diff: 'Difference', sameAsBase: 'Same as base', hoursAhead: 'h ahead', hoursBehind: 'h behind',
+      detail: 'City detail', remove: 'Remove from list', addTo: 'Add to list', inBase: 'Added',
+      monthOffset: 'Offset through the year', dayMap: 'Hour-by-hour today', reset: 'Now',
+      about: 'Timezone data comes from the system IANA database with automatic DST handling.\nAll conversions run on-device. No network, no tracking.',
+      copied: 'Copied', tipPick: 'This is the base city', tipAdd: 'Pick cities to compare',
+      ph: 'e.g. New York / Tokyo / Europe', lang: 'Language',
+      refBase: 'Base: my location', noResult: 'No matching city'
+    }
+  };
+
+  /* ---------------- 状态 ---------------- */
+  var KEY = 'worldclock.v1';
+
+  /* 地区 → 初始对照城市、12/24 小时制。
+     BUILD_REGION 由构建脚本注入：'cn'（国内版）或 'intl'（国际版）。
+     国内版固定以北京为中心；国际版按设备时区动态生成。 */
+  var BUILD_REGION = (typeof window.WC_BUILD_REGION === 'string') ? window.WC_BUILD_REGION : 'cn';
+
+  var TARGET_PRESETS_CN = ['America/New_York', 'Europe/London', 'Asia/Tokyo'];
+
+  /* 12 小时制国家（按惯例；用户仍可在设置里切换） */
+  var H12_REGIONS = [
+    'US', 'CA', 'AU', 'NZ', 'PH', 'IN', 'PK', 'BD', 'EG', 'SA', 'CO', 'MX', 'MY', 'ZA', 'IE', 'GB'
+  ];
+
+  var DEFAULTS = {
+    baseTz: null, refTz: null,
+    targets: BUILD_REGION === 'intl' ? null : TARGET_PRESETS_CN.slice(),
+    mode: 'now',
+    lang: BUILD_REGION === 'intl' ? 'en' : 'zh',
+    h24: true, sec: false, advice: true, theme: 'dark'
+  };
+  var tickTimer = null;
+  var pickerMode = null;      // 'base' | 'ref' | 'add'
+  var detailTz = null;
+  var lastCompute = null;
+
+  function load() {
+    var s = {};
+    try {
+      var raw = readStore(KEY);
+      if (raw) s = JSON.parse(raw) || {};
+    } catch (e) { s = {}; }
+
+    var out = Object.assign({}, DEFAULTS, s);
+
+    /* 首启动（国际版）：按设备时区生成初始城市与时间格式 */
+    if (!out.baseTz) {
+      out.baseTz = detectTz();
+      if (BUILD_REGION === 'intl') {
+        out.h24 = !prefers12h(out.baseTz);
+      }
+    }
+
+    if (!Array.isArray(out.targets) || !out.targets.length) {
+      out.targets = (BUILD_REGION === 'intl')
+        ? seedTargetsIntl(out.baseTz)
+        : TARGET_PRESETS_CN.slice();
+    }
+
+    /* 我的位置不该同时出现在对照列表里（多一个和自己同步的卡片没意义） */
+    var baseCanon = E.canonTz(out.baseTz || '');
+    out.targets = out.targets.filter(function (tz) { return E.canonTz(tz) !== baseCanon; });
+
+    return out;
+  }
+
+  function save() {
+    try { writeStore(KEY, JSON.stringify(St)); } catch (e) {}
+  }
+  /* Android 壳提供 SharedPreferences 桥时优先用它，file:// 下更可靠 */
+  function readStore(k) {
+    if (window.AndroidStore && typeof window.AndroidStore.getItem === 'function') {
+      var v = window.AndroidStore.getItem(k);
+      if (v) return v;
+    }
+    return localStorage.getItem(k);
+  }
+  function writeStore(k, v) {
+    if (window.AndroidStore && typeof window.AndroidStore.setItem === 'function') {
+      window.AndroidStore.setItem(k, v);
+      return;
+    }
+    localStorage.setItem(k, v);
+  }
+  function t(k) { return (I18N[St.lang] && I18N[St.lang][k]) || I18N.zh[k] || k; }
+
+  /* 设备时区 → 国家代码（用于挑初始城市、决定 12/24 小时制） */
+  var TZ_COUNTRY = {
+    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US',
+    'America/Phoenix': 'US', 'America/Los_Angeles': 'US', 'America/Anchorage': 'US',
+    'Pacific/Honolulu': 'US',
+    'America/Toronto': 'CA', 'America/Vancouver': 'CA',
+    'America/Mexico_City': 'MX', 'America/Bogota': 'CO', 'America/Lima': 'PE',
+    'America/Santiago': 'CL', 'America/Sao_Paulo': 'BR', 'America/Buenos_Aires': 'AR',
+    'America/Caracas': 'VE', 'America/Havana': 'CU',
+    'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR',
+    'Europe/Berlin': 'DE', 'Europe/Madrid': 'ES', 'Europe/Rome': 'IT',
+    'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE', 'Europe/Vienna': 'AT',
+    'Europe/Zurich': 'CH', 'Europe/Lisbon': 'PT', 'Europe/Stockholm': 'SE',
+    'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Helsinki': 'FI',
+    'Europe/Warsaw': 'PL', 'Europe/Prague': 'CZ', 'Europe/Budapest': 'HU',
+    'Europe/Athens': 'GR', 'Europe/Bucharest': 'RO', 'Europe/Moscow': 'RU',
+    'Europe/Kyiv': 'UA', 'Europe/Istanbul': 'TR', 'Atlantic/Reykjavik': 'IS',
+    'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Asia/Shanghai': 'CN',
+    'Asia/Chongqing': 'CN', 'Asia/Urumqi': 'CN', 'Asia/Hong_Kong': 'HK',
+    'Asia/Macau': 'MO', 'Asia/Taipei': 'TW', 'Asia/Singapore': 'SG',
+    'Asia/Kuala_Lumpur': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Ho_Chi_Minh': 'VN',
+    'Asia/Manila': 'PH', 'Asia/Jakarta': 'ID', 'Asia/Kolkata': 'IN',
+    'Asia/Karachi': 'PK', 'Asia/Dhaka': 'BD', 'Asia/Kathmandu': 'NP',
+    'Asia/Colombo': 'LK', 'Asia/Dubai': 'AE', 'Asia/Riyadh': 'SA',
+    'Asia/Jerusalem': 'IL', 'Asia/Tehran': 'IR', 'Asia/Baghdad': 'IQ',
+    'Asia/Almaty': 'KZ', 'Asia/Tashkent': 'UZ', 'Asia/Baku': 'AZ',
+    'Africa/Cairo': 'EG', 'Africa/Johannesburg': 'ZA', 'Africa/Lagos': 'NG',
+    'Africa/Nairobi': 'KE', 'Africa/Casablanca': 'MA',
+    'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Australia/Brisbane': 'AU',
+    'Australia/Perth': 'AU', 'Australia/Adelaide': 'AU',
+    'Pacific/Auckland': 'NZ', 'Pacific/Fiji': 'FJ'
+  };
+
+  function countryOf(tz) { return TZ_COUNTRY[tz] || TZ_COUNTRY[E.canonTz(tz)] || ''; }
+
+  function prefers12h(tz) {
+    var c = countryOf(tz);
+    return H12_REGIONS.indexOf(c) >= 0;
+  }
+
+  /* 国际版初始城市：本国补 1 个 + 跨洲锚点，至少 3 个、最多 5 个。
+     如果设备正好在锚点城市上，就用后面的备选顶替，避免只显示两个城市。 */
+  function seedTargetsIntl(baseTz) {
+    var country = countryOf(baseTz);
+
+    var sameCountry = E.CITY_TABLE.filter(function (c) {
+      return country && TZ_COUNTRY[c.id] === country && c.id !== baseTz;
+    }).slice(0, 1).map(function (c) { return c.id; });
+
+    /* 锚点按「离自己越远越有意思」排：先是其它大洲，再是同洲 */
+    var anchors = [
+      'Europe/London', 'America/New_York', 'Asia/Tokyo',
+      'America/Los_Angeles', 'Europe/Paris', 'Asia/Singapore',
+      'Australia/Sydney', 'Asia/Dubai', 'America/Sao_Paulo',
+      'Africa/Johannesburg', 'Pacific/Auckland', 'Asia/Kolkata'
+    ];
+
+    var out = sameCountry.slice();
+    for (var i = 0; i < anchors.length && out.length < 4; i++) {
+      var tz = anchors[i];
+      if (tz === baseTz || tz === E.canonTz(baseTz)) continue;
+      if (out.indexOf(tz) >= 0) continue;
+      out.push(tz);
+    }
+
+    /* 极端情况兜底 */
+    while (out.length < 3) {
+      var fill = ['UTC', 'Europe/Berlin', 'Asia/Shanghai'][out.length];
+      if (fill && fill !== baseTz && out.indexOf(fill) < 0) out.push(fill);
+      else break;
+    }
+
+    return out.slice(0, 5);
+  }
+
+  /* ---------------- 位置识别 ---------------- */
+  function detectTz() {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) return E.canonTz(tz);      // Asia/Calcutta → Asia/Kolkata 之类
+    } catch (e) {}
+    var off = -new Date().getTimezoneOffset();
+    var map = {
+      480: 'Asia/Shanghai', 540: 'Asia/Tokyo', 420: 'Asia/Bangkok',
+      0: 'Europe/London', 60: 'Europe/Paris', 120: 'Europe/Berlin',
+      '-300': 'America/New_York', '-360': 'America/Chicago',
+      '-420': 'America/Denver', '-480': 'America/Los_Angeles',
+      330: 'Asia/Kolkata', 345: 'Asia/Kathmandu', 600: 'Australia/Sydney',
+      '-180': 'America/Sao_Paulo', 180: 'Europe/Moscow'
+    };
+    return map[String(off)] || 'Asia/Shanghai';
+  }
+  /* 状态必须在 TZ_COUNTRY / seedTargetsIntl 就绪后再初始化：
+     load() 里会调用 countryOf() 与 seedTargetsIntl()，早于这两者会炸 */
+  var St = load();
+  var T = I18N[St.lang] || I18N.zh;
+
+  if (!St.baseTz) { St.baseTz = detectTz(); }
+  if (!St.refTz) St.refTz = St.baseTz;
+  save();   // 首次启动把探测到的时区、初始城市落盘
+
+  /* ---------------- DOM ---------------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var el = {
+    baseTime: $('baseTime'), baseCity: $('baseCity'), baseSub: $('baseSub'),
+    baseLabel: $('baseLabel'), list: $('targetList'), count: $('targetCount'),
+    wallPanel: $('wallPanel'), inDate: $('inDate'), inTime: $('inTime'),
+    slider: $('timeSlider'), sliderVal: $('sliderVal'), refChip: $('refChip'),
+    quickRow: $('quickRow'), pickerSheet: $('pickerSheet'), pickerList: $('pickerList'),
+    pickerSearch: $('pickerSearch'), pickerHint: $('pickerHint'),
+    detailSheet: $('detailSheet'), detailTitle: $('detailTitle'), detailList: $('detailList'),
+    setSheet: $('setSheet'), presetRow: $('presetRow'), foot: $('foot')
+  };
+
+  /* ---------------- 渲染 ---------------- */
+  function baseParts() {
+    var p = E.partsIn(St.baseTz, new Date());
+    return p;
+  }
+
+  function wallValue() {
+    var d = el.inDate.value || E.fmtDate(baseParts());
+    var hm = (el.inTime.value || '09:00').split(':');
+    var dp = d.split('-');
+    return {
+      y: parseInt(dp[0], 10), mo: parseInt(dp[1], 10), d: parseInt(dp[2], 10),
+      h: parseInt(hm[0], 10) || 0, mi: parseInt(hm[1], 10) || 0
+    };
+  }
+
+  function computeNow() {
+    var opt = { baseTz: St.baseTz, targets: St.targets, mode: St.mode };
+    if (St.mode === 'wall') {
+      opt.mode = 'wall';
+      opt.baseTz = St.refTz || St.baseTz;
+      opt.wall = wallValue();
+    }
+    lastCompute = E.compute(opt);
+    return lastCompute;
+  }
+
+  function swText(v) {
+    if (v) return '开';
+    return '关';
+  }
+
+  function applyLang() {
+    document.documentElement.lang = St.lang === 'en' ? 'en' : 'zh-CN';
+    document.title = t('title');
+    $('appTitle').textContent = t('title');
+    el.baseLabel.textContent = t('myloc');
+    $('btnPickBase').textContent = t('switch');
+    $('btnSettings').title = t('settings');
+    $('modeNow').textContent = t('now');
+    $('modeWall').textContent = t('wall');
+    $('targetsTitle').textContent = t('targets');
+    $('addLabel').textContent = t('add');
+    $('btnPickRef').textContent = t('changeBase');
+    $('btnResetNow').textContent = t('reset');
+    el.pickerSearch.placeholder = t('search');
+    $('setTitle').textContent = t('settings');
+    $('setAuto').textContent = t('autoLoc');
+    $('btnAutoLoc').textContent = t('detect');
+    $('setFmt').textContent = t('fmt24');
+    $('setSec').textContent = t('sec');
+    $('setTheme').textContent = t('theme');
+    $('setAdvice').textContent = t('advice');
+    $('setPreset').textContent = t('preset');
+    $('setClear').textContent = t('clear');
+    $('btnClear').textContent = t('clr');
+    $('aboutBox').textContent = t('about');
+    $('detailClose') && ($('detailClose').textContent = t('close'));
+    Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (b) {
+      if (b.tagName === 'BUTTON' && !b.id) b.textContent = t('close');
+    });
+    el.foot.textContent = 'IANA tzdb · ' + E.listTimeZones().length + ' zones · v1.0';
+  }
+
+  function fmtClock(p, withSec) {
+    var h = p.hour, mi = p.minute, s = p.second, suffix = '';
+    if (!St.h24) {
+      suffix = h < 12 ? ' AM' : ' PM';
+      var h12 = h % 12; if (h12 === 0) h12 = 12;
+      return pad(h12) + ':' + pad(mi) + (withSec ? ':' + pad(s) : '') + suffix;
+    }
+    return pad(h) + ':' + pad(mi) + (withSec ? ':' + pad(s) : '');
+  }
+
+  /* 拆成 主时间 / 秒 / 上午下午 三段，避免 12 小时制拼接错位 */
+  function clockParts(p) {
+    var sec = St.sec ? pad(p.second) : null;
+    if (!St.h24) {
+      var h = p.hour % 12; if (h === 0) h = 12;
+      return { main: pad(h) + ':' + pad(p.minute), sec: sec, suffix: p.hour < 12 ? ' AM' : ' PM' };
+    }
+    return { main: pad(p.hour) + ':' + pad(p.minute), sec: sec, suffix: '' };
+  }
+  function clockHTML(p, secClass) {
+    var c = clockParts(p);
+    return c.main +
+      (c.sec ? '<span class="' + (secClass || 'sec') + '">:' + c.sec + '</span>' : '') +
+      (c.suffix ? '<span class="' + (secClass || 'sec') + '">' + c.suffix + '</span>' : '');
+  }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function cityName(tz) {
+    return St.lang === 'en' ? E.cityLabelEn(tz) : E.cityLabel(tz);
+  }
+
+  function renderBase() {
+    var c = computeNow();
+    var b = c.base;
+    var effTz = c.baseTz;                     // 实时模式=我的位置；指定时间模式=基准城市
+    el.baseTime.innerHTML = clockHTML(b.parts, 'sec');
+    var info = E.cityInfo(effTz);
+    el.baseCity.textContent = (info.flag ? info.flag + ' ' : '') + cityName(effTz);
+    var bits = [b.week, b.date, b.offsetText];
+    if (b.dst) bits.push(t('dst'));
+    if (St.lang === 'en') bits = [b.weekEN, b.date, b.offsetText].concat(b.dst ? [t('dst')] : []);
+    el.baseSub.textContent = bits.join(' · ');
+    if (effTz !== St.baseTz) el.baseLabel.textContent = t('base') + ' · ' + cityName(effTz);
+    else el.baseLabel.textContent = t('myloc');
+  }
+
+  function renderTargets() {
+    var c = lastCompute;
+    el.count.textContent = St.targets.length ? (St.targets.length + ' / 10') : '';
+    if (!St.targets.length) {
+      el.list.innerHTML = '<div class="empty">' + t('empty').replace(/\n/g, '<br>') + '</div>';
+      return;
+    }
+    var html = '';
+    c.rows.forEach(function (r) {
+      var info = E.cityInfo(r.tz);
+      var name = cityName(r.tz);
+      var badges = '';
+      if (r.dayDiff !== 0) badges += '<span class="daytag">' + (r.dayDiff > 0 ? t('tomorrow') : t('yesterday')) + '</span>';
+      if (r.dst) badges += '<span class="badge dst">' + t('dst') + '</span>';
+      if (St.advice) {
+        var cls = r.advice.key === 'ok' ? '' : (r.advice.key === 'sleep' ? 'bad' : 'warn');
+        var label = r.advice.key === 'ok' ? t('okContact') : (r.advice.key === 'sleep' ? t('sleep') : t('warnContact'));
+        badges += '<span class="badge ' + cls + '">' + label + '</span>';
+      }
+      var diffTxt = diffLabel(r.diffFromBase);
+      var secHtml = '';
+      html += '' +
+        '<div class="tcard" data-tz="' + r.tz + '">' +
+          '<div class="flag">' + (info.flag || '🌍') + '</div>' +
+          '<div class="left">' +
+            '<div class="city">' + esc(name) + '</div>' +
+            '<div class="sub"><span>' + diffTxt + '</span>' + (badges ? ' · ' + badges : '') + '</div>' +
+          '</div>' +
+          '<div class="right">' +
+            '<div class="rtime">' + clockHTML(r.parts, 'sec') + '</div>' +
+            '<div class="rdate">' + (St.lang === 'en' ? r.dateEN + ' ' + r.weekEN : r.dateCN + ' ' + r.week) + '</div>' +
+          '</div>' +
+          '<button class="del" data-del="' + r.tz + '">' + (St.lang === 'en' ? 'Del' : '删除') + '</button>' +
+        '</div>';
+    });
+    el.list.innerHTML = html;
+  }
+
+  function diffLabel(mins) {
+    if (mins === 0) return t('sameAsBase');
+    var a = Math.abs(mins);
+    if (St.lang === 'en') {
+      var s = (Math.round((a / 60) * 10) / 10).toString();
+      return (mins > 0 ? '+' + s + t('hoursAhead') : '-' + s + t('hoursBehind'));
+    }
+    var hh2 = Math.floor(a / 60), mm2 = a % 60;
+    var body = hh2 ? hh2 + ' 小时' : '';
+    if (mm2) body += (body ? ' ' : '') + mm2 + ' 分钟';
+    return (mins > 0 ? '比基准快 ' : '比基准慢 ') + body;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function render() {
+    renderBase();
+    renderTargets();
+    renderWallUI();
+  }
+
+  function renderWallUI() {
+    if (St.mode !== 'wall') { el.wallPanel.classList.add('hidden'); return; }
+    el.wallPanel.classList.remove('hidden');
+    var info = E.cityInfo(St.refTz);
+    el.refChip.textContent = t('base') + '：' + (info.flag || '') + ' ' + E.cityLabel(St.refTz);
+    var w = wallValue();
+    var mins = w.h * 60 + w.mi;
+    el.slider.value = String(mins);
+    el.sliderVal.textContent = pad(w.h) + ':' + pad(w.mi) + '  (' + E.cityLabel(St.refTz) + ')';
+  }
+
+  function buildQuickRow() {
+    if (el.quickRow.dataset.built) return;
+    var presets = [
+      { h: 9, label: '09:00' }, { h: 12, label: '12:00' }, { h: 18, label: '18:00' },
+      { h: 20, label: '20:00' }, { h: 22, label: '22:00' }
+    ];
+    el.quickRow.innerHTML = presets.map(function (p) {
+      return '<button class="quickbtn" data-h="' + p.h + '">' + p.label + '</button>';
+    }).join('');
+    el.quickRow.dataset.built = '1';
+  }
+
+  /* ---------------- 城市选择器 ---------------- */
+  function openPicker(mode) {
+    pickerMode = mode;
+    el.pickerSearch.value = '';
+    el.pickerHint.textContent = mode === 'base' || mode === 'ref' ? t('tipPick') : t('tipAdd');
+    renderPicker('');
+    el.pickerSheet.classList.remove('hidden');
+    setTimeout(function () { el.pickerSearch.focus(); }, 120);
+  }
+  function closePicker() { el.pickerSheet.classList.add('hidden'); el.pickerSearch.blur(); }
+
+  function renderPicker(q) {
+    var list = E.searchZones(q, 60);
+    var now = new Date();
+    var html = list.map(function (c) {
+      var off = E.offsetMinutes(c.id, now);
+      var p = E.partsIn(c.id, now);
+      var on = (pickerMode === 'add' && St.targets.indexOf(c.id) >= 0);
+      var isBase = (c.id === St.baseTz);
+      var name = St.lang === 'en'
+        ? (c.id === 'UTC' ? 'UTC' : (E.cityInfo(c.id).enName || c.name))
+        : (c.cn ? c.cn + ' · ' + c.name : c.name);
+      var sub = c.id;
+      if (St.lang === 'zh' && c.en) sub = c.en + ' · ' + c.id;
+      return '<div class="pitem' + (on ? ' on' : '') + '" data-pick="' + c.id + '">' +
+        '<div class="flag" style="font-size:19px">' + (c.flag || '🌍') + '</div>' +
+        '<div>' +
+          '<div class="pname">' + esc(name) + (isBase ? ' <span class="badge">★</span>' : '') + '</div>' +
+          '<div class="psub">' + esc(sub) + '</div>' +
+        '</div>' +
+        '<div class="pright">' + pad(p.hour) + ':' + pad(p.minute) + '<br>' +
+          '<span style="font-size:10px;color:var(--txt3)">' + E.formatOffset(off) + '</span></div>' +
+      '</div>';
+    }).join('');
+    el.pickerList.innerHTML = html || '<div class="empty">' + t('noResult') + '</div>';
+  }
+
+  /* ---------------- 详情 ---------------- */
+  function openDetail(tz) {
+    detailTz = tz;
+    el.detailSheet.classList.remove('hidden');
+    renderDetail();
+  }
+  function renderDetail() {
+    var tz = detailTz;
+    if (!tz) return;
+    var c = computeNow();
+    var row = null;
+    for (var i = 0; i < c.rows.length; i++) if (c.rows[i].tz === tz) row = c.rows[i];
+    var now = new Date();
+    if (!row) {
+      var p = E.partsIn(tz, now), off = E.offsetMinutes(tz, now);
+      row = {
+        tz: tz, parts: p, offset: off, offsetText: E.formatOffset(off),
+        dst: E.isDST(tz, now), week: E.fmtWeekCN(p), date: E.fmtDate(p)
+      };
+    }
+    var info = E.cityInfo(tz);
+    var title = cityName(tz);
+    el.detailTitle.textContent = (info.flag || '🌍') + ' ' + title;
+
+    var en = St.lang === 'en';
+    var rows = [];
+    rows.push([en ? 'Time now' : '当前时间', E.fmtHMS(row.parts)]);
+    rows.push([en ? 'Date' : '日期', en ? (row.dateEN || row.date) + ' ' + (row.weekEN || '') : row.date + ' ' + row.week]);
+    rows.push([en ? 'Time zone' : '时区', tz]);
+    rows.push([en ? 'UTC offset' : 'UTC 偏移',
+      en ? row.offsetText : row.offsetText + '（' + E.offsetLabelCN(row.offset) + '）']);
+    rows.push([en ? 'Daylight saving' : '夏令时', row.dst ? (en ? 'Yes' : '是（DST）') : (en ? 'No' : '否')]);
+    rows.push([en ? 'vs my time' : '与我的时差', diffLabel(row.offset - c.base.offset)]);
+
+    var html = rows.map(function (r) {
+      return '<div class="detail-row"><span class="k">' + r[0] + '</span><span class="v">' + esc(r[1]) + '</span></div>';
+    }).join('');
+
+    /* 逐时对照 */
+    var baseHourNow = c.base.parts.hour;
+    var map = [];
+    for (var hh = 0; hh < 24; hh += 3) {
+      var refWall = { y: c.base.parts.year, mo: c.base.parts.month, d: c.base.parts.day, h: hh, mi: 0 };
+      var inst = E.wallTimeToDate(St.baseTz, refWall.y, refWall.mo, refWall.d, refWall.h, refWall.mi);
+      var tp = E.partsIn(tz, inst);
+      var dd = E.dayDiff(c.base.parts, tp);
+      var tag = dd === 0 ? '' : (dd > 0 ? '<span class="daytag">+' + dd + '</span>' : '<span class="daytag">' + dd + '</span>');
+      map.push('<div class="ystrip-item' + (Math.abs(hh - baseHourNow) < 3 ? ' now' : '') + '">' +
+        pad(hh) + ':00<b>' + pad(tp.hour) + ':' + pad(tp.minute) + '</b>' + tag + '</div>');
+    }
+    html += '<div style="margin-top:14px;font-size:12px;color:var(--txt2)">' +
+      (St.lang === 'en' ? 'My time → their time' : '我的时间 → 对方时间') + '</div>';
+    html += '<div class="year-strip">' + map.join('') + '</div>';
+
+    html += '<div class="detail-row" style="border:0;padding-top:14px">' +
+      '<button class="quickbtn" data-addcur="' + tz + '" style="flex:1;padding:11px">' +
+      (St.targets.indexOf(tz) >= 0 ? t('remove') : t('addTo')) + '</button></div>';
+
+    el.detailList.innerHTML = html;
+  }
+
+  /* ---------------- 设置 ---------------- */
+  function syncSettings() {
+    $('btnFmt').textContent = St.h24 ? '24h' : '12h';
+    $('btnFmt').classList.toggle('on', St.h24);
+    $('btnSec').textContent = St.sec ? (St.lang === 'en' ? 'On' : '开') : (St.lang === 'en' ? 'Off' : '关');
+    $('btnSec').classList.toggle('on', St.sec);
+    $('btnAdvice').textContent = St.advice ? (St.lang === 'en' ? 'On' : '开') : (St.lang === 'en' ? 'Off' : '关');
+    $('btnAdvice').classList.toggle('on', St.advice);
+    $('btnTheme').textContent = St.theme === 'light' ? t('light') : t('dark');
+    $('btnTheme').classList.toggle('on', St.theme !== 'light');
+    document.body.classList.toggle('light', St.theme === 'light');
+    if (!el.presetRow.dataset.built) {
+      var ps = Object.keys(E.PRESETS).map(function (k) {
+        return '<button class="quickbtn" data-preset="' + k + '">' + E.PRESETS[k].name + '</button>';
+      }).join('');
+      el.presetRow.innerHTML = ps;
+      el.presetRow.dataset.built = '1';
+    }
+  }
+
+  /* ---------------- 事件 ---------------- */
+  function bind() {
+    document.querySelectorAll('.modebtn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        St.mode = b.dataset.mode; save();
+        document.querySelectorAll('.modebtn').forEach(function (x) { x.classList.toggle('active', x === b); });
+        if (St.mode === 'wall') {
+          var now = new Date();
+          var p = E.partsIn(St.refTz || St.baseTz, now);
+          if (!el.inDate.value) el.inDate.value = E.fmtDate(p);
+          if (!el.inTime.value) el.inTime.value = pad(p.hour) + ':' + pad(p.minute);
+          buildQuickRow();
+        }
+        render();
+      });
+    });
+
+    $('btnPickBase').addEventListener('click', function () {
+      openPicker(St.mode === 'wall' ? 'ref' : 'base');
+    });
+    $('btnPickRef').addEventListener('click', function () { openPicker('ref'); });
+    $('btnAdd').addEventListener('click', function () { openPicker('add'); });
+    $('btnLang').addEventListener('click', function () {
+      St.lang = St.lang === 'zh' ? 'en' : 'zh'; save();
+      T = I18N[St.lang];
+      applyLang(); syncSettings(); render();
+    });
+    $('btnSettings').addEventListener('click', function () {
+      syncSettings();
+      el.setSheet.classList.remove('hidden');
+    });
+
+    document.addEventListener('click', function (ev) {
+      var close = ev.target.closest('[data-close]');
+      if (close) {
+        var which = close.dataset.close;
+        if (which === 'picker') closePicker();
+        if (which === 'detail') el.detailSheet.classList.add('hidden');
+        if (which === 'set') el.setSheet.classList.add('hidden');
+        return;
+      }
+      var pick = ev.target.closest('[data-pick]');
+      if (pick) {
+        var tz = pick.dataset.pick;
+        if (pickerMode === 'base') { St.baseTz = tz; if (!St.refTz) St.refTz = tz; }
+        else if (pickerMode === 'ref') { St.refTz = tz; }
+        else { if (St.targets.indexOf(tz) < 0 && St.targets.length < 10) St.targets.push(tz); }
+        save(); closePicker(); render();
+        return;
+      }
+      var del = ev.target.closest('[data-del]');
+      if (del) {
+        var dtz = del.dataset.del;
+        St.targets = St.targets.filter(function (x) { return x !== dtz; });
+        save(); render(); return;
+      }
+      var addcur = ev.target.closest('[data-addcur]');
+      if (addcur) {
+        var atz = addcur.dataset.addcur;
+        var idx = St.targets.indexOf(atz);
+        if (idx >= 0) St.targets.splice(idx, 1);
+        else if (St.targets.length < 10) St.targets.push(atz);
+        save(); render(); renderDetail(); return;
+      }
+      var pre = ev.target.closest('[data-preset]');
+      if (pre) {
+        var pset = E.PRESETS[pre.dataset.preset];
+        if (pset) {
+          pset.tz.forEach(function (x) { if (St.targets.indexOf(x) < 0) St.targets.push(x); });
+          St.targets = St.targets.slice(0, 10);
+          save(); render();
+        }
+        return;
+      }
+      var hbtn = ev.target.closest('[data-h]');
+      if (hbtn) {
+        var h = parseInt(hbtn.dataset.h, 10);
+        el.inTime.value = pad(h) + ':00';
+        render(); return;
+      }
+      var card = ev.target.closest('.tcard');
+      if (card && !ev.target.closest('.del')) {
+        if (card.classList.contains('swiped')) { card.classList.remove('swiped'); return; }
+        openDetail(card.dataset.tz);
+      }
+    });
+
+    /* 长按显示删除 */
+    var pressTimer = null;
+    el.list.addEventListener('touchstart', function (ev) {
+      var card = ev.target.closest('.tcard');
+      if (!card) return;
+      pressTimer = setTimeout(function () {
+        document.querySelectorAll('.tcard.swiped').forEach(function (c) { c.classList.remove('swiped'); });
+        card.classList.add('swiped');
+      }, 450);
+    }, { passive: true });
+    ['touchend', 'touchmove', 'touchcancel'].forEach(function (e) {
+      el.list.addEventListener(e, function () { clearTimeout(pressTimer); }, { passive: true });
+    });
+
+    el.pickerSearch.addEventListener('input', function () { renderPicker(this.value); });
+
+    el.inDate.addEventListener('change', render);
+    el.inTime.addEventListener('change', render);
+    el.slider.addEventListener('input', function () {
+      var v = parseInt(this.value, 10);
+      el.inTime.value = pad(Math.floor(v / 60)) + ':' + pad(v % 60);
+      render();
+    });
+    $('btnResetNow').addEventListener('click', function () {
+      var p = E.partsIn(St.refTz || St.baseTz, new Date());
+      el.inDate.value = E.fmtDate(p);
+      el.inTime.value = pad(p.hour) + ':' + pad(p.minute);
+      render();
+    });
+
+    $('btnAutoLoc').addEventListener('click', function () {
+      St.baseTz = detectTz(); St.refTz = St.baseTz; save(); render();
+    });
+    $('btnFmt').addEventListener('click', function () { St.h24 = !St.h24; save(); syncSettings(); render(); });
+    $('btnSec').addEventListener('click', function () { St.sec = !St.sec; save(); syncSettings(); render(); });
+    $('btnAdvice').addEventListener('click', function () { St.advice = !St.advice; save(); syncSettings(); render(); });
+    $('btnTheme').addEventListener('click', function () {
+      St.theme = St.theme === 'light' ? 'dark' : 'light';
+      save(); syncSettings(); render();
+    });
+    $('btnClear').addEventListener('click', function () { St.targets = []; save(); render(); });
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') {
+        closePicker();
+        el.detailSheet.classList.add('hidden');
+        el.setSheet.classList.add('hidden');
+      }
+    });
+  }
+
+  /* ---------------- 启动 ---------------- */
+  function tick() {
+    render();
+  }
+  function boot() {
+    applyLang();
+    syncSettings();
+    buildQuickRow();
+    el.baseLabel.textContent = t('myloc');
+    document.querySelectorAll('.modebtn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.mode === St.mode);
+    });
+    if (St.mode === 'wall') {
+      var p = E.partsIn(St.refTz || St.baseTz, new Date());
+      el.inDate.value = E.fmtDate(p);
+      el.inTime.value = pad(p.hour) + ':' + pad(p.minute);
+    }
+    bind();
+    render();
+    tickTimer = setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { clearInterval(tickTimer); tickTimer = null; }
+      else if (!tickTimer) { tickTimer = setInterval(tick, 1000); render(); }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+</script>
+</body>
+</html>

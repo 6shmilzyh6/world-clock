@@ -3,6 +3,35 @@
   'use strict';
   var E = window.WCEngine;
 
+  /* ---------------- 老内核补丁 ----------------
+     Android 5/6 的 WebView 与部分国产内核：
+       - NodeList 没有 forEach
+       - Element.closest 不存在
+     这两者在本文件里用得很多，先补齐再继续。 */
+  if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
+    NodeList.prototype.forEach = Array.prototype.forEach;
+  }
+  if (typeof Element !== 'undefined' && !Element.prototype.closest) {
+    Element.prototype.closest = function (sel) {
+      var node = this;
+      while (node && node.nodeType === 1) {
+        if ((node.matches || node.msMatchesSelector || node.webkitMatchesSelector).call(node, sel)) return node;
+        node = node.parentElement;
+      }
+      return null;
+    };
+  }
+  if (typeof Object.assign !== 'function') {
+    Object.assign = function (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var src = arguments[i];
+        if (!src) continue;
+        for (var k in src) if (Object.prototype.hasOwnProperty.call(src, k)) target[k] = src[k];
+      }
+      return target;
+    };
+  }
+
   /* ---------------- 多语言 ---------------- */
   var I18N = {
     zh: {
@@ -45,26 +74,61 @@
 
   /* ---------------- 状态 ---------------- */
   var KEY = 'worldclock.v1';
+
+  /* 地区 → 初始对照城市、12/24 小时制。
+     BUILD_REGION 由构建脚本注入：'cn'（国内版）或 'intl'（国际版）。
+     国内版固定以北京为中心；国际版按设备时区动态生成。 */
+  var BUILD_REGION = (typeof window.WC_BUILD_REGION === 'string') ? window.WC_BUILD_REGION : 'cn';
+
+  var TARGET_PRESETS_CN = ['America/New_York', 'Europe/London', 'Asia/Tokyo'];
+
+  /* 12 小时制国家（按惯例；用户仍可在设置里切换） */
+  var H12_REGIONS = [
+    'US', 'CA', 'AU', 'NZ', 'PH', 'IN', 'PK', 'BD', 'EG', 'SA', 'CO', 'MX', 'MY', 'ZA', 'IE', 'GB'
+  ];
+
   var DEFAULTS = {
-    baseTz: null, refTz: null, targets: ['America/New_York', 'Europe/London', 'Asia/Tokyo'],
-    mode: 'now', lang: 'en', h24: true, sec: false, advice: true, theme: 'dark'
+    baseTz: null, refTz: null,
+    targets: BUILD_REGION === 'intl' ? null : TARGET_PRESETS_CN.slice(),
+    mode: 'now',
+    lang: BUILD_REGION === 'intl' ? 'en' : 'zh',
+    h24: true, sec: false, advice: true, theme: 'dark'
   };
-  var St = load();
-  var T = I18N[St.lang] || I18N.zh;
   var tickTimer = null;
   var pickerMode = null;      // 'base' | 'ref' | 'add'
   var detailTz = null;
   var lastCompute = null;
+
   function load() {
     var s = {};
     try {
       var raw = readStore(KEY);
       if (raw) s = JSON.parse(raw) || {};
     } catch (e) { s = {}; }
+
     var out = Object.assign({}, DEFAULTS, s);
-    if (!Array.isArray(out.targets)) out.targets = DEFAULTS.targets.slice();
+
+    /* 首启动（国际版）：按设备时区生成初始城市与时间格式 */
+    if (!out.baseTz) {
+      out.baseTz = detectTz();
+      if (BUILD_REGION === 'intl') {
+        out.h24 = !prefers12h(out.baseTz);
+      }
+    }
+
+    if (!Array.isArray(out.targets) || !out.targets.length) {
+      out.targets = (BUILD_REGION === 'intl')
+        ? seedTargetsIntl(out.baseTz)
+        : TARGET_PRESETS_CN.slice();
+    }
+
+    /* 我的位置不该同时出现在对照列表里（多一个和自己同步的卡片没意义） */
+    var baseCanon = E.canonTz(out.baseTz || '');
+    out.targets = out.targets.filter(function (tz) { return E.canonTz(tz) !== baseCanon; });
+
     return out;
   }
+
   function save() {
     try { writeStore(KEY, JSON.stringify(St)); } catch (e) {}
   }
@@ -85,18 +149,106 @@
   }
   function t(k) { return (I18N[St.lang] && I18N[St.lang][k]) || I18N.zh[k] || k; }
 
+  /* 设备时区 → 国家代码（用于挑初始城市、决定 12/24 小时制） */
+  var TZ_COUNTRY = {
+    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US',
+    'America/Phoenix': 'US', 'America/Los_Angeles': 'US', 'America/Anchorage': 'US',
+    'Pacific/Honolulu': 'US',
+    'America/Toronto': 'CA', 'America/Vancouver': 'CA',
+    'America/Mexico_City': 'MX', 'America/Bogota': 'CO', 'America/Lima': 'PE',
+    'America/Santiago': 'CL', 'America/Sao_Paulo': 'BR', 'America/Buenos_Aires': 'AR',
+    'America/Caracas': 'VE', 'America/Havana': 'CU',
+    'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR',
+    'Europe/Berlin': 'DE', 'Europe/Madrid': 'ES', 'Europe/Rome': 'IT',
+    'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE', 'Europe/Vienna': 'AT',
+    'Europe/Zurich': 'CH', 'Europe/Lisbon': 'PT', 'Europe/Stockholm': 'SE',
+    'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Helsinki': 'FI',
+    'Europe/Warsaw': 'PL', 'Europe/Prague': 'CZ', 'Europe/Budapest': 'HU',
+    'Europe/Athens': 'GR', 'Europe/Bucharest': 'RO', 'Europe/Moscow': 'RU',
+    'Europe/Kyiv': 'UA', 'Europe/Istanbul': 'TR', 'Atlantic/Reykjavik': 'IS',
+    'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Asia/Shanghai': 'CN',
+    'Asia/Chongqing': 'CN', 'Asia/Urumqi': 'CN', 'Asia/Hong_Kong': 'HK',
+    'Asia/Macau': 'MO', 'Asia/Taipei': 'TW', 'Asia/Singapore': 'SG',
+    'Asia/Kuala_Lumpur': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Ho_Chi_Minh': 'VN',
+    'Asia/Manila': 'PH', 'Asia/Jakarta': 'ID', 'Asia/Kolkata': 'IN',
+    'Asia/Karachi': 'PK', 'Asia/Dhaka': 'BD', 'Asia/Kathmandu': 'NP',
+    'Asia/Colombo': 'LK', 'Asia/Dubai': 'AE', 'Asia/Riyadh': 'SA',
+    'Asia/Jerusalem': 'IL', 'Asia/Tehran': 'IR', 'Asia/Baghdad': 'IQ',
+    'Asia/Almaty': 'KZ', 'Asia/Tashkent': 'UZ', 'Asia/Baku': 'AZ',
+    'Africa/Cairo': 'EG', 'Africa/Johannesburg': 'ZA', 'Africa/Lagos': 'NG',
+    'Africa/Nairobi': 'KE', 'Africa/Casablanca': 'MA',
+    'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Australia/Brisbane': 'AU',
+    'Australia/Perth': 'AU', 'Australia/Adelaide': 'AU',
+    'Pacific/Auckland': 'NZ', 'Pacific/Fiji': 'FJ'
+  };
+
+  function countryOf(tz) { return TZ_COUNTRY[tz] || TZ_COUNTRY[E.canonTz(tz)] || ''; }
+
+  function prefers12h(tz) {
+    var c = countryOf(tz);
+    return H12_REGIONS.indexOf(c) >= 0;
+  }
+
+  /* 国际版初始城市：本国补 1 个 + 跨洲锚点，至少 3 个、最多 5 个。
+     如果设备正好在锚点城市上，就用后面的备选顶替，避免只显示两个城市。 */
+  function seedTargetsIntl(baseTz) {
+    var country = countryOf(baseTz);
+
+    var sameCountry = E.CITY_TABLE.filter(function (c) {
+      return country && TZ_COUNTRY[c.id] === country && c.id !== baseTz;
+    }).slice(0, 1).map(function (c) { return c.id; });
+
+    /* 锚点按「离自己越远越有意思」排：先是其它大洲，再是同洲 */
+    var anchors = [
+      'Europe/London', 'America/New_York', 'Asia/Tokyo',
+      'America/Los_Angeles', 'Europe/Paris', 'Asia/Singapore',
+      'Australia/Sydney', 'Asia/Dubai', 'America/Sao_Paulo',
+      'Africa/Johannesburg', 'Pacific/Auckland', 'Asia/Kolkata'
+    ];
+
+    var out = sameCountry.slice();
+    for (var i = 0; i < anchors.length && out.length < 4; i++) {
+      var tz = anchors[i];
+      if (tz === baseTz || tz === E.canonTz(baseTz)) continue;
+      if (out.indexOf(tz) >= 0) continue;
+      out.push(tz);
+    }
+
+    /* 极端情况兜底 */
+    while (out.length < 3) {
+      var fill = ['UTC', 'Europe/Berlin', 'Asia/Shanghai'][out.length];
+      if (fill && fill !== baseTz && out.indexOf(fill) < 0) out.push(fill);
+      else break;
+    }
+
+    return out.slice(0, 5);
+  }
+
   /* ---------------- 位置识别 ---------------- */
   function detectTz() {
     try {
       var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz) return tz;
+      if (tz) return E.canonTz(tz);      // Asia/Calcutta → Asia/Kolkata 之类
     } catch (e) {}
     var off = -new Date().getTimezoneOffset();
-    var map = { 480: 'Asia/Shanghai', 540: 'Asia/Tokyo', 420: 'Asia/Bangkok', 0: 'Europe/London', '60': 'Europe/Paris', '-300': 'America/New_York', '-480': 'America/Los_Angeles', 330: 'Asia/Kolkata', 600: 'Australia/Sydney' };
+    var map = {
+      480: 'Asia/Shanghai', 540: 'Asia/Tokyo', 420: 'Asia/Bangkok',
+      0: 'Europe/London', 60: 'Europe/Paris', 120: 'Europe/Berlin',
+      '-300': 'America/New_York', '-360': 'America/Chicago',
+      '-420': 'America/Denver', '-480': 'America/Los_Angeles',
+      330: 'Asia/Kolkata', 345: 'Asia/Kathmandu', 600: 'Australia/Sydney',
+      '-180': 'America/Sao_Paulo', 180: 'Europe/Moscow'
+    };
     return map[String(off)] || 'Asia/Shanghai';
   }
-  if (!St.baseTz) { St.baseTz = detectTz(); save(); }
+  /* 状态必须在 TZ_COUNTRY / seedTargetsIntl 就绪后再初始化：
+     load() 里会调用 countryOf() 与 seedTargetsIntl()，早于这两者会炸 */
+  var St = load();
+  var T = I18N[St.lang] || I18N.zh;
+
+  if (!St.baseTz) { St.baseTz = detectTz(); }
   if (!St.refTz) St.refTz = St.baseTz;
+  save();   // 首次启动把探测到的时区、初始城市落盘
 
   /* ---------------- DOM ---------------- */
   var $ = function (id) { return document.getElementById(id); };

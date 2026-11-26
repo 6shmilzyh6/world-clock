@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # 世界时钟 · Android 构建（aapt2 + javac + d8 + apksigner，无 Gradle）
 #   -Variant cn   → 中文版 com.yg.worldclock     「世界时钟」
 #   -Variant intl → 国际版 com.yg.worldclock.intl "World Clock"（默认英文）
@@ -61,14 +61,13 @@ if ($Variant -eq 'intl') {
 }
 [System.IO.File]::WriteAllText("$Work\AndroidManifest.xml", $manifest, (New-Object System.Text.UTF8Encoding($false)))
 
-# ---------- 3. 前端资源（国际版把默认语言改为英文） ----------
+# ---------- 3. 前端资源（cn 用国内构建，intl 用国际构建） ----------
 Write-Host "== 3. assets" -ForegroundColor Cyan
-$html = Get-Content "$Root\build\worldclock.html" -Raw -Encoding UTF8
-if ($Lang -eq 'en') {
-    $html = $html.Replace("mode: 'now', lang: 'zh'", "mode: 'now', lang: 'en'")
-}
+$htmlPath = if ($Lang -eq 'en') { "$Root\build\worldclock-intl.html" } else { "$Root\build\worldclock.html" }
+if (-not (Test-Path $htmlPath)) { Fail "缺少 $htmlPath，先跑 node tools/bundle.js cn`nnode tools/bundle.js intl" }
+$html = Get-Content $htmlPath -Raw -Encoding UTF8
 [System.IO.File]::WriteAllText("$Work\assets\index.html", $html, (New-Object System.Text.UTF8Encoding($false)))
-Write-Host ("   assets/index.html " + [math]::Round((Get-Item "$Work\assets\index.html").Length/1KB,1) + " KB")
+Write-Host ("   assets/index.html " + [math]::Round((Get-Item "$Work\assets\index.html").Length/1KB,1) + " KB  <- " + (Split-Path $htmlPath -Leaf))
 
 # ---------- 4. aapt2 ----------
 Write-Host "== 4. aapt2 compile + link" -ForegroundColor Cyan

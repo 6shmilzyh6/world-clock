@@ -1,14 +1,19 @@
-首个版本。
+首个版本。功能相同，分国内版与国际版 —— 只是默认值不同：语言、时间格式、初始定位城市。
 
 **下载**
 
-| 版本 | 文件 |
-|---|---|
-| 安卓 · 中文 | `WorldClock-zh-v1.0.0.apk` |
-| 安卓 · 国际（英文默认） | `WorldClock-Intl-v1.0.0.apk` |
-| 单文件 HTML | `WorldClock-single.html` |
+| 版本 | 文件 | 默认 |
+|---|---|---|
+| 安卓 · 国内版 | `WorldClock-zh-v1.0.0.apk` | 中文 · 24 小时制 · 北京 |
+| 安卓 · 国际版 | `WorldClock-Intl-v1.0.0.apk` | English · 自动识别设备时区 · 美国/英国/澳洲等 12 小时制 |
+| 单文件 HTML（中） | `WorldClock-single.html` | 双击即开，无需服务器 |
+| 单文件 HTML（英） | `WorldClock-single-intl.html` | 同上，英文默认 |
 
 在线试用 / iPhone 安装：https://6shmilzyh6.github.io/world-clock/
+
+**两个版本的区别**
+
+功能完全一样，都能在 App 内随时切语言、改位置、换时间格式。国际版首次启动会按设备时区自动定位，并挑选本国一处 + 跨洲几处作为初始对照城市；包名不同（`com.yg.worldclock` / `com.yg.worldclock.intl`），可同时安装。
 
 **功能**
 
@@ -18,14 +23,11 @@
 - 夏令时按当天真实规则计算，切换日 23/25 小时边界正确
 - 联系建议、城市详情、逐时对照表
 - 中英双语、24/12 小时制、深/浅主题、显示秒、城市预设
+- Android 5/6 老 WebView 缺 `formatToParts` 时自动降级
 - 纯离线，无联网、无账号、无广告
 
 **校验**
 
 - Android 5.0（API 21）～ 15+，v1/v2/v3 签名全部通过 `apksigner verify`
-- 两个 APK 包名不同（`com.yg.worldclock` / `com.yg.worldclock.intl`），可同时安装
-- APK 未上架任何商店，安装时需允许「未知来源应用」
-
-**哈希**
-
-见 `SHA256SUMS.txt`。
+- 国际版在纽约、洛杉矶、柏林、伦敦、东京、悉尼、新德里、圣保罗、开罗 9 个时区实测，自动定位与 12/24h 判断均正确
+- 哈希见 `SHA256SUMS.txt`

@@ -180,6 +180,68 @@
     'Pacific/Auckland': 'Auckland', 'Pacific/Fiji': 'Suva', 'UTC': 'UTC'
   };
 
+  /* ---------- 旧时区别名 → 现用名 ----------
+     Android WebView / 部分系统时区库会返回 Asia/Calcutta、Asia/Saigon、Europe/Kiev
+     这类老名字，统一折算成 CITY_TABLE 里的现用名，否则查不到城市、国旗、国家 */
+  var TZ_ALIAS = {
+    'Asia/Calcutta': 'Asia/Kolkata',
+    'Asia/Saigon': 'Asia/Ho_Chi_Minh',
+    'Asia/Katmandu': 'Asia/Kathmandu',
+    'Asia/Rangoon': 'Asia/Yangon',
+    'Asia/Dacca': 'Asia/Dhaka',
+    'Asia/Chungking': 'Asia/Chongqing',
+    'Asia/Macao': 'Asia/Macau',
+    'Asia/Ulan_Bator': 'Asia/Ulaanbaatar',
+    'Europe/Kiev': 'Europe/Kyiv',
+    'US/Eastern': 'America/New_York',
+    'US/Central': 'America/Chicago',
+    'US/Mountain': 'America/Denver',
+    'US/Pacific': 'America/Los_Angeles',
+    'US/Alaska': 'America/Anchorage',
+    'US/Hawaii': 'Pacific/Honolulu',
+    'Canada/Atlantic': 'America/Halifax',
+    'Canada/Eastern': 'America/Toronto',
+    'Canada/Central': 'America/Winnipeg',
+    'Canada/Mountain': 'America/Edmonton',
+    'Canada/Pacific': 'America/Vancouver',
+    'Mexico/General': 'America/Mexico_City',
+    'Brazil/East': 'America/Sao_Paulo',
+    'Brazil/West': 'America/Manaus',
+    'Brazil/Acre': 'America/Rio_Branco',
+    'Chile/Continental': 'America/Santiago',
+    'Cuba': 'America/Havana',
+    'Egypt': 'Africa/Cairo',
+    'Israel': 'Asia/Jerusalem',
+    'Iran': 'Asia/Tehran',
+    'Iraq': 'Asia/Baghdad',
+    'Turkey': 'Europe/Istanbul',
+    'Poland': 'Europe/Warsaw',
+    'Portugal': 'Europe/Lisbon',
+    'Iceland': 'Atlantic/Reykjavik',
+    'GB': 'Europe/London',
+    'GB-Eire': 'Europe/London',
+    'Eire': 'Europe/Dublin',
+    'NZ': 'Pacific/Auckland',
+    'Japan': 'Asia/Tokyo',
+    'Singapore': 'Asia/Singapore',
+    'Hongkong': 'Asia/Hong_Kong',
+    'PRC': 'Asia/Shanghai',
+    'ROC': 'Asia/Taipei',
+    'ROK': 'Asia/Seoul',
+    'W-SU': 'Europe/Moscow',
+    'Australia/ACT': 'Australia/Sydney',
+    'Australia/NSW': 'Australia/Sydney',
+    'Australia/Victoria': 'Australia/Melbourne',
+    'Australia/Queensland': 'Australia/Brisbane',
+    'Australia/West': 'Australia/Perth',
+    'Australia/South': 'Australia/Adelaide'
+  };
+
+  function canonTz(tz) {
+    if (!tz) return tz;
+    return TZ_ALIAS[tz] || tz;
+  }
+
   /* ---------- 时区有效性（Android WebView / 老浏览器时区库可能缺项） ---------- */
   var tzValidCache = {};
   function isValidTz(tz) {
@@ -194,6 +256,39 @@
     return ok;
   }
 
+  /* ---------- formatToParts 兼容层 ----------
+     formatToParts 是 Chrome 57 / Safari 11 才有的。Android 5–6 的原生 WebView、
+     老 UC/QQ 浏览器内核没有它，而整个引擎靠它取时区字段。
+     这里用 format() 的 en-US 固定输出反向解析，保证老设备也能算。 */
+  var HAS_PARTS = (function () {
+    try {
+      return typeof Intl.DateTimeFormat.prototype.formatToParts === 'function' &&
+             typeof new Intl.DateTimeFormat('en-US', { timeZone: 'UTC' }).formatToParts === 'function';
+    } catch (e) { return false; }
+  })();
+
+  /* en-US + hour12:false 的 format() 输出形如 "11/25/2026, 22:31:07" */
+  var RE_US = /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i;
+
+  function partsOf(dtf, date) {
+    if (HAS_PARTS) {
+      var p = {};
+      dtf.formatToParts(date).forEach(function (x) { if (x.type !== 'literal') p[x.type] = x.value; });
+      return p;
+    }
+    var s = dtf.format(date).replace(/\u202f|\u00a0/g, ' ');
+    var m = RE_US.exec(s);
+    if (!m) return {};
+    var h = parseInt(m[4], 10);
+    var ap = (m[7] || '').toUpperCase();
+    if (ap === 'PM' && h < 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return {
+      month: m[1], day: m[2], year: m[3],
+      hour: String(h), minute: m[5], second: m[6] || '00'
+    };
+  }
+
   /* ---------- 时区偏移（分钟，东正西负） ---------- */
   function offsetMinutes(tz, date) {
     date = date || new Date();
@@ -204,8 +299,8 @@
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit'
       });
-      var p = {};
-      dtf.formatToParts(date).forEach(function (x) { p[x.type] = x.value; });
+      var p = partsOf(dtf, date);
+      if (!p.year) return 0;
       var asUTC = Date.UTC(
         parseInt(p.year, 10), parseInt(p.month, 10) - 1, parseInt(p.day, 10),
         parseInt(p.hour === '24' ? '00' : p.hour, 10), parseInt(p.minute, 10), parseInt(p.second, 10)
@@ -220,20 +315,33 @@
   function partsIn(tz, date) {
     date = date || new Date();
     if (!isValidTz(tz)) tz = 'UTC';
+    /* 注意：不能带 weekday —— 降级路径用 format() 正则解析，带上星期会破坏格式 */
     var dtf = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz, hour12: false, weekday: 'short',
+      timeZone: tz, hour12: false,
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
-    var p = {};
-    dtf.formatToParts(date).forEach(function (x) { p[x.type] = x.value; });
+    var p = partsOf(dtf, date);
     var hour = parseInt(p.hour, 10); if (hour === 24) hour = 0;
     return {
       tz: tz,
       year: parseInt(p.year, 10), month: parseInt(p.month, 10), day: parseInt(p.day, 10),
       hour: hour, minute: parseInt(p.minute, 10), second: parseInt(p.second, 10),
-      weekday: p.weekday
+      weekday: weekdayOf(tz, date)
     };
+  }
+
+  /* 星期：老内核没有 formatToParts 时靠偏移反推 */
+  function weekdayOf(tz, date) {
+    var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    if (HAS_PARTS) {
+      try {
+        var wd = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(date);
+        if (names.indexOf(wd) >= 0) return wd;
+      } catch (e) {}
+    }
+    var localMs = date.getTime() + offsetMinutes(tz, date) * 60000;
+    return names[new Date(localMs).getUTCDay()];
   }
 
   /* ---------- 偏移格式化：+08:00 / -03:30 / UTC ---------- */
@@ -397,6 +505,7 @@
   }
 
   function cityInfo(tz) {
+    tz = canonTz(tz);
     for (var i = 0; i < CITY_TABLE.length; i++) {
       if (CITY_TABLE[i].id === tz) {
         var hit = CITY_TABLE[i];
@@ -481,6 +590,8 @@
     listTimeZones: listTimeZones,
     cityInfo: cityInfo,
     cityLabel: cityLabel,
+    canonTz: canonTz,
+    TZ_ALIAS: TZ_ALIAS,
     cityLabelEn: cityLabelEn,
     searchZones: searchZones,
     sortByOffset: sortByOffset,

@@ -9,9 +9,16 @@ $h = @{ Authorization = "token $tok"; 'User-Agent' = 'yg-dsh'; Accept = 'applica
 $REPO = '6shmilzyh6/world-clock'
 
 # ---------- 1. 生成 SHA256SUMS ----------
+$ARTIFACTS = @(
+    'WorldClock-zh-v1.0.0.apk',
+    'WorldClock-Intl-v1.0.0.apk',
+    'WorldClock-single.html',
+    'WorldClock-single-intl.html'
+)
 $sums = @()
-foreach ($n in @('WorldClock-zh-v1.0.0.apk', 'WorldClock-Intl-v1.0.0.apk', 'WorldClock-single.html')) {
+foreach ($n in $ARTIFACTS) {
     $p = Join-Path $Root "dist\$n"
+    if (-not (Test-Path $p)) { Write-Host "!! 缺少 dist\$n" -ForegroundColor Red; exit 1 }
     $hash = (Get-FileHash $p -Algorithm SHA256).Hash.ToLower()
     $sums += "$hash  $n"
 }
@@ -48,10 +55,11 @@ Write-Host "RELEASE: $($rel.html_url)  id=$($rel.id)"
 
 # ---------- 3. 上传资产 ----------
 $files = @(
-    @{ path = "$Root\dist\WorldClock-zh-v1.0.0.apk";   type = 'application/vnd.android.package-archive' },
-    @{ path = "$Root\dist\WorldClock-Intl-v1.0.0.apk"; type = 'application/vnd.android.package-archive' },
-    @{ path = "$Root\dist\WorldClock-single.html";     type = 'text/html' },
-    @{ path = $sumsPath;                               type = 'text/plain' }
+    @{ path = "$Root\dist\WorldClock-zh-v1.0.0.apk";      type = 'application/vnd.android.package-archive' },
+    @{ path = "$Root\dist\WorldClock-Intl-v1.0.0.apk";    type = 'application/vnd.android.package-archive' },
+    @{ path = "$Root\dist\WorldClock-single.html";        type = 'text/html' },
+    @{ path = "$Root\dist\WorldClock-single-intl.html";   type = 'text/html' },
+    @{ path = $sumsPath;                                  type = 'text/plain' }
 )
 
 foreach ($f in $files) {

@@ -31,8 +31,8 @@ function buildWeb(opts) {
     fs.copyFileSync(path.join(APP, f), path.join(DIST, f));
   }
 
+  // app.js：只注入构建区域，默认语言 / 初始城市 / 12h 全由 region 决定
   let appjs = fs.readFileSync(path.join(APP, 'app.js'), 'utf8');
-  appjs = appjs.replace("mode: 'now', lang: 'zh'", `mode: 'now', lang: '${opts.lang}'`);
   fs.writeFileSync(path.join(DIST, 'app.js'), appjs, 'utf8');
 
   let html = fs.readFileSync(path.join(APP, 'index.html'), 'utf8');
@@ -42,6 +42,11 @@ function buildWeb(opts) {
     '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">\n' +
     '<link rel="manifest" href="manifest.webmanifest">\n' +
     `<meta name="description" content="${opts.desc}">`
+  );
+  // 注入区域标记（必须在 app.js 之前）
+  html = html.replace(
+    '<script src="engine.js"></script>',
+    `<script>window.WC_BUILD_REGION=${JSON.stringify(opts.lang === 'en' ? 'intl' : 'cn')};</script>\n<script src="engine.js"></script>`
   );
   fs.writeFileSync(path.join(DIST, 'index.html'), html, 'utf8');
 
@@ -116,7 +121,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     const src = path.join(ICON, f);
     if (fs.existsSync(src)) fs.copyFileSync(src, path.join(DIST, 'icons', f));
   }
-  console.log(`docs/${opts.dir} ✓  默认语言 ${opts.lang}`);
+  console.log(`docs/${opts.dir} ✓  默认语言 ${opts.lang} / 区域 ${opts.lang === 'en' ? 'intl' : 'cn'}`);
 }
 
 rmrf(path.join(DOCS, 'web'));
@@ -216,18 +221,27 @@ footer{text-align:center;color:var(--txt3);font-size:12px;padding-top:56px;line-
 
 <div class="dl">
   <div class="dlcard">
-    <h3>🇨🇳 安卓 · 中文版</h3>
-    <p>APK · 205 KB · 包名 com.yg.worldclock</p>
+    <h3>🇨🇳 国内版 · 世界时钟</h3>
+    <p>APK · 209 KB · 包名 com.yg.worldclock</p>
     <a class="btn" href="${REL}/${APK_ZH}">下载 APK</a>
     <a class="btn ghost" href="app/">网页版打开</a>
-    <div class="note">手机浏览器直接点上面的链接下载，安装时允许"未知来源应用"即可。</div>
+    <div class="note">默认中文、24 小时制、以北京时间为中心。手机浏览器直接点上面链接下载，安装时允许"未知来源应用"。</div>
   </div>
   <div class="dlcard">
-    <h3>🌍 Android / iOS · English</h3>
-    <p>APK + PWA · default UI in English</p>
+    <h3>🌍 国际版 · World Clock</h3>
+    <p>APK · 209 KB · 包名 com.yg.worldclock.intl</p>
     <a class="btn" href="${REL}/${APK_EN}">Download APK</a>
     <a class="btn ghost" href="app-en/">Open web app</a>
-    <div class="note">International build has a different package name, so both can be installed side by side.</div>
+    <div class="note">English by default. Auto-detects your timezone on first launch, picks nearby cities, and uses 12-hour time in the US / UK / AU / IN etc. Different package name, so it installs alongside the Chinese build.</div>
+  </div>
+</div>
+
+<div class="dlcard" style="margin-top:14px">
+  <h3>两个版本的区别</h3>
+  <p style="margin-bottom:10px">同样的功能，只是默认值不同 —— 都能在 App 里随时切语言、改位置。</p>
+  <div class="feat">
+    <div><b>国内版</b><span>首屏中文 · 24 小时制 · 我的位置默认北京 · 初始对照城市 纽约 / 伦敦 / 东京</span></div>
+    <div><b>国际版</b><span>首屏英文 · 按设备时区自动定位 · 美国/英国/澳洲等默认 12 小时制 · 初始城市自动挑选（本国一处 + 跨洲几处）</span></div>
   </div>
 </div>
 
@@ -237,6 +251,7 @@ footer{text-align:center;color:var(--txt3);font-size:12px;padding-top:56px;line-
   <img src="img/shot-schedule.png" alt="指定时间换算">
   <img src="img/shot-detail.png" alt="城市详情">
   <img src="img/shot-en.png" alt="English UI">
+  <img src="img/shot-intl-us.png" alt="US timezone, 12-hour">
 </div>
 
 <h2>功能</h2>
@@ -248,7 +263,7 @@ footer{text-align:center;color:var(--txt3);font-size:12px;padding-top:56px;line-
   <div><b>夏令时自动</b><span>按当天真实 DST 规则算，切换日 23/25 小时的边界也正确</span></div>
   <div><b>联系建议</b><span>按对方当地时间提示"适合联系 / 对方可能已休息"</span></div>
   <div><b>城市详情</b><span>UTC 偏移、DST 状态、与我的时差、当天逐时对照表</span></div>
-  <div><b>中英双语</b><span>24/12 小时制、深/浅主题、显示秒、城市预设一键套用</span></div>
+  <div><b>老设备也能跑</b><span>Android 5/6 的老 WebView 缺 formatToParts 时自动降级，不会白屏</span></div>
 </div>
 
 <h2>iPhone / iPad 安装</h2>
